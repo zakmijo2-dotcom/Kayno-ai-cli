@@ -1,0 +1,17 @@
+{
+  "name": "nova-ai-cli",
+  "version": "0.1.0",
+  "description": "NOVA - zero-dependency multi-provider AI coding agent CLI with OAuth (Gemini/Antigravity), skills, and plugins",
+  "type": "module",
+  "bin": {
+    "nova": "./bin/nova.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "license": "MIT",
+  "scripts": {
+    "start": "node bin/nova.js",
+    "test": "node tests/smoke.mjs"
+  }
+}
