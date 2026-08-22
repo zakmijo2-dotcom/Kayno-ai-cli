@@ -4,8 +4,8 @@
 
 - **أكثر من 60 مزوّد جاهز** (وبعد المزامنة من models.dev أكثر من 200): OpenAI, Claude, Gemini, DeepSeek, Qwen, Groq, OpenRouter, Kimi, GLM, Ollama وغيرها.
 - **OAuth**: 
-  - `nova auth login google` — نفس آلية Gemini CLI عبر Code Assist.
-  - `nova auth login antigravity` — دخول Antigravity، أو استيراد التوكنات: `nova auth import antigravity --access T --refresh T`.
+  - `mij auth login google` — نفس آلية Gemini CLI عبر Code Assist.
+  - `mij auth login antigravity` — دخول Antigravity، أو استيراد التوكنات: `mij auth import antigravity --access T --refresh T`.
 - **أدوات وكيل**: قراءة/كتابة ملفات، تنفيذ أوامر مع تأكيد، جلب روابط — مع حلقات استدعاء أدوات متعددة الخطوات.
 - **نظام Skills**: ملفات `SKILL.md` في `~/.nova/skills` تتفعّل تلقائياً حسب كلمات التشغيل.
 - **نظام Plugins/Extensions**: ضع ملف JS في `~/.nova/plugins` يسجّل أوامر `/slash` وhooks.
@@ -13,15 +13,19 @@
 ## تشغيل سريع
 
 ```bash
-cd /root/nova && npm link
+curl -fsSL https://raw.githubusercontent.com/zakmijo2-dotcom/Kayno-ai-cli/main/install.sh | sh
+export PATH="$HOME/.local/bin:$PATH"
 
-nova chat -p antigravity -m gemini-3-pro-preview      # بعد nova auth login antigravity
-nova chat -p google-code-assist -m gemini-2.5-pro     # OAuth مثل Gemini CLI
-nova ask -p deepseek -m deepseek-chat "اشرح هذا الكود"
-nova providers sync                                    # +200 مزود إضافي
+cd /root/nova && npm link   # أو من نسخة محلية
+
+mij auth set-key openrouter sk-or-...
+mij chat -p antigravity -m gemini-3-pro-preview      # بعد mij auth login antigravity
+mij chat -p google-code-assist -m gemini-2.5-pro     # OAuth مثل Gemini CLI
+mij ask -p deepseek -m deepseek-chat "اشرح هذا الكود"
+mij providers sync                                    # +200 مزود إضافي
 ```
 
-الإعدادات في `~/.nova/config.json` والمفاتيح عبر `nova auth set-key <provider> <key>` أو متغيرات البيئة.
+الإعدادات في `~/.nova/config.json` والمفاتيح عبر `mij auth set-key <provider> <key>` أو متغيرات البيئة.
 
 ## الاختبارات
 

@@ -1,9 +1,10 @@
 {
-  "name": "nova-ai-cli",
+  "name": "kayno-ai-cli",
   "version": "0.1.0",
-  "description": "NOVA - zero-dependency multi-provider AI coding agent CLI with OAuth (Gemini/Antigravity), skills, and plugins",
+  "description": "MIJ (Kayno) - zero-dependency multi-provider AI coding agent CLI with OAuth (Gemini/Antigravity), skills, and plugins",
   "type": "module",
   "bin": {
+    "mij": "./bin/mij.js",
     "nova": "./bin/nova.js"
   },
   "engines": {

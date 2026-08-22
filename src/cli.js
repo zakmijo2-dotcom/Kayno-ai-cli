@@ -45,7 +45,7 @@ export async function main(argv) {
     case '--version':
     case '-v':
     case 'version':
-      console.log(`nova ${VERSION}`);
+      console.log(`mij ${VERSION}`);
       return 0;
     case 'help':
     case '--help':
@@ -53,7 +53,7 @@ export async function main(argv) {
       printHelp();
       return 0;
     default:
-      console.error(`Unknown command: ${cmd}. Try nova help`);
+      console.error(`Unknown command: ${cmd}. Try mij help`);
       return 1;
   }
 }
@@ -81,7 +81,7 @@ async function resolveTarget(flags) {
   const base = loadConfig();
   const providerId = flags.provider || base.provider;
   let provider = getProvider(providerId);
-  if (!provider) throw new Error(`Unknown provider "${providerId}". See: nova providers list`);
+  if (!provider) throw new Error(`Unknown provider "${providerId}". See: mij providers list`);
   if (base.providers?.[providerId]?.baseUrl && !provider.baseUrl) {
     provider = { ...provider, baseUrl: base.providers[providerId].baseUrl };
   }
@@ -104,7 +104,7 @@ async function resolveTarget(flags) {
 }
 
 function requireModel(model) {
-  if (!model) throw new Error('No model configured. Use -m <model> or: nova config set model <name>');
+  if (!model) throw new Error('No model configured. Use -m <model> or: mij config set model <name>');
   return model;
 }
 
@@ -153,7 +153,7 @@ async function cmdChat(args) {
   };
 
   repl: while (true) {
-    process.stdout.write(c.cyan('nova❯ '));
+    process.stdout.write(c.cyan('mij❯ '));
     let line = await nextLine();
     if (line === null || line === undefined) break repl;
     line = String(line).trim();
@@ -189,7 +189,7 @@ async function cmdAsk(args) {
   const { flags, positional } = parseFlags(args);
   const prompt = positional.join(' ').trim();
   if (!prompt) {
-    console.error('usage: nova ask "your question" [-p provider] [-m model]');
+    console.error('usage: mij ask "your question" [-p provider] [-m model]');
     return 1;
   }
   const { cfg, provider, model } = await resolveTarget(flags);
@@ -255,7 +255,7 @@ async function slashCommand(line, ctxx) {
       }
       state.cfg.model = rest[0];
       state.model = rest[0];
-      console.log(c.green(`model → ${rest[0]} (session)`), c.dim('(persist with: nova config set model ...)'));
+      console.log(c.green(`model → ${rest[0]} (session)`), c.dim('(persist with: mij config set model ...)'));
       return true;
     }
     case '/provider': {
@@ -295,7 +295,7 @@ async function slashCommand(line, ctxx) {
 }
 
 function banner(cfg, provider, model) {
-  console.log(`${c.bold(c.magenta('⚡ NOVA'))} ${c.dim(VERSION)} — ${provider.name} / ${c.bold(model)}`);
+  console.log(`${c.bold(c.magenta('⚡ MIJ'))} ${c.dim(VERSION)} — ${provider.name} / ${c.bold(model)}`);
   console.log(c.dim(`tools=${cfg.tools !== false ? 'on' : 'off'} yolo=${!!cfg.yolo} profile=${cfg.profile} · /help for commands · /exit to quit\n`));
 }
 
@@ -309,7 +309,7 @@ function checkKeyHint(provider) {
   if (!key && !stored) {
     console.log(
       c.yellow(`⚠ no API key for ${provider.id}. Fix with:\n`) +
-        c.dim(`   export ${provider.env}=<key>   OR   nova auth set-key ${provider.id}\n`)
+        c.dim(`   export ${provider.env}=<key>   OR   mij auth set-key ${provider.id}\n`)
     );
   }
 }
@@ -337,7 +337,7 @@ async function cmdProviders(args) {
   }
   const list = sub === '--all' ? allProviders() : PRESETS;
   printProviderTable(list);
-  console.log(c.dim(`\n${PRESETS.length} builtin presets · ${allProviders().length} total after models.dev sync (nova providers sync)\n`));
+  console.log(c.dim(`\n${PRESETS.length} builtin presets · ${allProviders().length} total after models.dev sync (mij providers sync)\n`));
   return 0;
 }
 
@@ -353,7 +353,7 @@ function printProviderTable(list) {
 
 async function cmdModels(args) {
   const [, q] = args;
-  console.log(c.dim('Tip: use the provider dashboard or `nova providers info <id>`; OpenAI-compatible providers accept any model id.\n'));
+  console.log(c.dim('Tip: use the provider dashboard or `mij providers info <id>`; OpenAI-compatible providers accept any model id.\n'));
   const list = searchProviders(q || '');
   for (const p of list.slice(0, 30)) {
     if (p.defaultModel) console.log(`${c.cyan(p.id.padEnd(24))} ${p.defaultModel}`);
@@ -390,7 +390,7 @@ async function cmdAuth(args) {
   if (sub === 'set-key') {
     const [pid, key] = vals.length ? [target, vals[0]] : [null, target];
     if (!pid || !key) {
-      console.error('usage: nova auth set-key <provider> <api-key>');
+      console.error('usage: mij auth set-key <provider> <api-key>');
       return 1;
     }
     setToken(pid, { apiKey: key });
@@ -416,7 +416,7 @@ async function cmdSkills(args) {
   if (sub === 'show') {
     const s = skills.find((x) => x.name.toLowerCase() === (name || '').toLowerCase());
     if (!s) {
-      console.error('not found. nova skills list');
+      console.error('not found. mij skills list');
       return 1;
     }
     console.log(s.body);
@@ -452,7 +452,7 @@ async function cmdConfig(args) {
   }
   if (sub === 'set') {
     if (!key || value === undefined) {
-      console.error('usage: nova config set <dot.key> <value>');
+      console.error('usage: mij config set <dot.key> <value>');
       return 1;
     }
     setConfigValue(key, value);
@@ -483,23 +483,23 @@ function printHelp() {
 ${c.bold(c.magenta('NOVA'))} — multi-provider AI agent CLI (zero dependencies)
 
 ${c.bold('Usage')}
-  nova chat [-p provider] [-m model] [--yolo] [--no-tools] [--profile coder|assistant|raw] [-s "system"]
-  nova ask "question" [-p provider] [-m model]          one-shot mode (reads stdin too)
-  nova providers [list|--all|search <q>|info <id>|sync] list/sync catalog (models.dev adds hundreds)
-  nova models [search]
-  nova auth login google | antigravity                  OAuth flows
-  nova auth import antigravity --access T --refresh T   paste tokens captured elsewhere
-  nova auth set-key <provider> <key>                    store API key
-  nova auth status                                      show stored creds
-  nova skills [list|show <name>]                        SKILL.md system
-  nova plugins                                          extensions/plugins
-  nova config [get|set <k> <v>|path]
-  nova sessions                                         recent chats
+  mij chat [-p provider] [-m model] [--yolo] [--no-tools] [--profile coder|assistant|raw] [-s "system"]
+  mij ask "question" [-p provider] [-m model]          one-shot mode (reads stdin too)
+  mij providers [list|--all|search <q>|info <id>|sync] list/sync catalog (models.dev adds hundreds)
+  mij models [search]
+  mij auth login google | antigravity                  OAuth flows
+  mij auth import antigravity --access T --refresh T   paste tokens captured elsewhere
+  mij auth set-key <provider> <key>                    store API key
+  mij auth status                                      show stored creds
+  mij skills [list|show <name>]                        SKILL.md system
+  mij plugins                                          extensions/plugins
+  mij config [get|set <k> <v>|path]
+  mij sessions                                         recent chats
 
 ${c.bold('Examples')}
-  nova chat -p antigravity -m gemini-3-pro-preview
-  nova chat -p google-code-assist -m gemini-2.5-pro     # OAuth like Gemini CLI
-  nova ask -p openrouter -m anthropic/claude-sonnet-4.5 "explain this repo"
-  cat file.py | nova ask -p deepseek -m deepseek-chat "review this"
+  mij chat -p antigravity -m gemini-3-pro-preview
+  mij chat -p google-code-assist -m gemini-2.5-pro     # OAuth like Gemini CLI
+  mij ask -p openrouter -m anthropic/claude-sonnet-4.5 "explain this repo"
+  cat file.py | mij ask -p deepseek -m deepseek-chat "review this"
 `);
 }
