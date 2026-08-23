@@ -1,55 +1,105 @@
-# Kayno (أمر التشغيل: mij) — دليل سريع (عربي)
+<div align="center">
 
-أداة CLI للذكاء الاصطناعي **بدون أي اعتماديات** (Node.js ≥ 18) تدعم:
+# ⚡ Kayno — دليل عربي
 
-- **أكثر من 60 مزوّد جاهز** (وبعد المزامنة من models.dev أكثر من 200): OpenAI, Claude, Gemini, DeepSeek, Qwen, Groq, OpenRouter, Kimi, GLM, Ollama وغيرها.
-- **OAuth**: 
-  - `mij auth login google` — نفس آلية Gemini CLI عبر Code Assist.
-  - `mij auth login antigravity` — دخول Antigravity، أو استيراد التوكنات: `mij auth import antigravity --access T --refresh T`.
-- **واجهة TUI احترافية وخفيفة**: بث مباشر للردود، شريط حالة، بطاقات أدوات، قوائم اختيار للموديل/المزود/الجلسات — بدون أي مكتبات UI، مناسبة لـ Termux والأجهزة الضعيفة.
-- **نظام أدوات كامل لوكيل برمجي**: read_file/write_file/edit_file/patch_file/grep/glob/list_dir/run_command/fetch_url/git_status/git_diff — كلها داخل Sandbox يمنع الخروج من المشروع، مع محرك صلاحيات (allow/ask/deny لكل فئة: قراءة/كتابة/تنفيذ/شبكة/git).
-- **إدارة سياق ذكية**: حدود سياق لكل موديل، تقدير التوكنات، تشذيب المحادثة القديمة مع الحفاظ على تكامل استدعاءات الأدوات.
-- **ذكاء Git والمشروع**: فرع الحالة في شريط المعلومات، كشف اللغة ومدير الحزم وأمر الاختبارات تلقائيًا.
-- **تشخيصات**: `mij doctor` لفحص البيئة والمفاتيح والكاش.
-- **نظام Skills**: ملفات `SKILL.md` في `~/.nova/skills` تتفعّل تلقائياً حسب كلمات التشغيل.
-- **نظام Plugins/Extensions**: ضع ملف JS في `~/.nova/plugins` يسجّل أوامر `/slash` وhooks.
+**وكيل برمجي بالذكاء الاصطناعي للطرفية — بدون أي اعتماديات.**
 
-## تشغيل سريع
+· [النسخة الإنجليزية الكاملة](README.md)
+
+</div>
+
+---
+
+Kayno (أمر التشغيل: **`mij`**) وكيل برمجي احترافي يعمل داخل الطرفية: واجهة TUI سريعة، حلقات أدوات ذكية، حماية Sandbox للمشروع، ومحرك صلاحيات — كله بمشروع Node.js نقي **بدون ولا dependency واحدة**، مصمم أساسًا لـ Termux والأجهزة الضعيفة.
+
+## التثبيت
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/zakmijo2-dotcom/Kayno-ai-cli/main/install.sh | sh
 export PATH="$HOME/.local/bin:$PATH"
-
-cd /root/nova && npm link   # أو من نسخة محلية
-
-mij                                     # يشغّل الواجهة التفاعلية TUI
-mij auth set-key openrouter sk-or-...
-# داخل الواجهة: /provider و/model و/sessions قوائم تفاعلية
-
-mij chat -p antigravity -m gemini-3-pro-preview      # بعد mij auth login antigravity
-mij chat -p google-code-assist -m gemini-2.5-pro     # OAuth مثل Gemini CLI
-cat file.py | mij ask -p deepseek -m deepseek-chat "راجع هذا"   # نص صافي بدون ANSI
-KAYNO_TUI=0 mij chat                                  # REPL كلاسيكي للأنابيب
-
-## اختصارات لوحة المفاتيح
-| مفتاح | وظيفة |
-|---|---|
-| Enter | إرسال |
-| Ctrl+J | سطر جديد |
-| ↑/↓ | تنقل بالسجل |
-| Tab | إكمال الأوامر |
-| / | فتح قائمة الأوامر (اكتب للتصفية) |
-| Ctrl+C | إلغاء الرد الجاري / خروج |
-| Ctrl+L | تنظيف الشاشة |
-| Ctrl+U | مسح السطر |
-
-mij providers sync                     # +200 مزود إضافي
 ```
 
-الإعدادات في `~/.nova/config.json` والمفاتيح عبر `mij auth set-key <provider> <key>` أو متغيرات البيئة.
+لـ Termux: `pkg install nodejs` ثم نفس الأمر أعلاه.
+
+## البدء السريع
+
+```bash
+mij auth set-key openrouter sk-or-...   # أو متغير البيئة
+mij                                     # يشغّل الواجهة التفاعلية
+```
+
+داخل الواجهة:
+- `/provider` و `/model` — قوائم اختيار تفاعلية مع حالة الجاهزية
+- `/git` — فرع/تغييرات/سجل بدون مغادرة المحادثة
+- `/sessions` — استعراض واستئناف الجلسات المحفوظة
+
+مزودون آخرون:
+
+```bash
+mij auth login google                    # OAuth مثل Gemini CLI
+mij auth login antigravity               # خلفية Antigravity
+mij chat -p ollama -m llama3.2           # محلي بالكامل
+```
+
+## الأوضاع الثلاثة
+
+| الأمر | السلوك |
+|---|---|
+| `mij` | الواجهة التفاعلية TUI |
+| `KAYNO_TUI=0 mij chat` | REPL نصي بسيط للأنابيب |
+| `mij ask "سؤال"` | إخراج نصي صافٍ بدون ANSI، يقرأ stdin |
+
+```bash
+cat server.js | mij ask -p deepseek -m deepseek-chat "راجع هذا"
+```
+
+## نظام الأدوات + الصلاحيات
+
+11 أداة: `read_file` `write_file` `edit_file` `patch_file` `grep` `glob` `list_dir` `run_command` `fetch_url` `git_status` `git_diff`
+
+- كل مسار محصور داخل جذر المشروع (Sandbox) — أي محاولة خروج تُرفض
+- سياسات مستقلة لكل فئة:
+
+```jsonc
+{
+  "permissions": {
+    "read": "allow", "write": "ask", "shell": "ask",
+    "network": "allow", "git": "allow"
+  }
+}
+```
+
+في الواجهة التفاعلية تظهر بطاقة تأكيد `[y/N]`؛ وفي السكربتات يفشل الطلب برسالة واضحة بدلاً من التعليق.
+
+## اختصارات المفاتيح
+
+| مفتاح | وظيفة |
+|---|---|
+| `Enter` / `Ctrl+J` | إرسال / سطر جديد |
+| `/` | قائمة الأوامر (اكتب للتصفية، Tab للإكمال) |
+| `↑ ↓` | تنقل بالسجل |
+| `Ctrl+C` | إلغاء الجاري — اضغط مرتين للخروج |
+| `Ctrl+L` / `Ctrl+U` | تنظيف الشاشة / السطر |
+
+## أوامر CLI
+
+```bash
+mij doctor                    # فحص البيئة والمفاتيح والكاش
+mij git status|diff|log       # عرض Git السريع
+mij providers sync            # +200 مزود من models.dev
+mij sessions search "<نص>"    # بحث في الجلسات
+```
 
 ## الاختبارات
 
 ```bash
-npm test   # يفحص المهارات، الإضافات، الكتالوج، وحلقة استدعاء الأدوات عبر خادم SSE محلي
+npm test   # 6 مجموعات، أكثر من 100 تحقق بما فيها E2E
 ```
+
+## الأمان
+
+- إخفاء تلقائي للأسرار من كل السجلات (`sk-…`, `ghp_…`, Bearer)
+- توكنات OAuth في `~/.kayno/auth.json` فقط
+- توسيع الـSandbox يكون مقصودًا عبر `workspace.extraRoots`
+
+الترخيص: [MIT](LICENSE) — النسخة الإنجليزية الكاملة: [README.md](README.md)
