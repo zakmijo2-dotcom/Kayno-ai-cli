@@ -5,6 +5,7 @@ import { resolveInWorkspace, workspaceRoot } from './workspace.js';
 import { checkPermission } from './permissions.js';
 import { truncate } from './util.js';
 import { gitStatus, gitDiff, gitLog } from './git.js';
+import { diagnosticsForFiles, projectDiagnostics } from './diagnostics-engine.js';
 
 const READ_CAP_BYTES = 48 * 1024;
 const GREP_IGNORE = new Set([
@@ -55,6 +56,8 @@ export const TOOL_SCHEMAS = [
   schema('git_status', 'Git working tree status: branch + changed files + counts.', {}, []),
   schema('git_diff', 'Unified diff of changes (worktree by default, or staged).',
     { staged: { type: 'boolean', description: 'Use --cached' } }, []),
+  schema('run_diagnostics', 'Run available linters/type-checks on given files (node --check, tsc, py_compile) and project-level checks.',
+    { files: { type: 'array', items: { type: 'string' }, description: 'Files to check (default: project-level checks only)' } }, []),
 ];
 
 export async function executeTool(name, args = {}, opts = {}) {
@@ -71,6 +74,19 @@ export async function executeTool(name, args = {}, opts = {}) {
     case 'fetch_url': return toolFetchUrl(args);
     case 'git_status': return formatGitStatus();
     case 'git_diff': return gitDiff({ staged: !!args.staged });
+    case 'run_diagnostics': {
+      const perFile = diagnosticsForFiles(Array.isArray(args.files) ? args.files : []);
+      const project = projectDiagnostics();
+      const lines = [`files checked: ${perFile.ran}`];
+      for (const f of perFile.findings) lines.push(`[file] ${f}`);
+      for (const p2 of project) {
+        lines.push(`[${p2.tool}] ${p2.ok ? 'OK' : 'FAIL\n' + p2.detail}`);
+      }
+      if (!perFile.findings.length && project.every((x) => x.ok)) {
+        lines.push('DIAGNOSTICS CLEAN');
+      }
+      return lines.join('\n').slice(0, 16 * 1024);
+    }
     default:
       throw new Error(`Unknown tool: ${name}`);
   }

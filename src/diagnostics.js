@@ -13,7 +13,7 @@ function check(label, ok, detail = '') {
   return ok;
 }
 
-export function runDoctor() {
+export async function runDoctor() {
   console.log(c.bold('Kayno doctor\n'));
 
   const nodeMajor = Number(process.version.slice(1).split('.')[0]);
@@ -75,6 +75,13 @@ export function runDoctor() {
     proj.agentsFile,
   ].filter(Boolean).join(' · ');
   check('project detected', proj.languages.length > 0, summary);
+
+  try {
+    const { detectLinters } = await import('./diagnostics-engine.js');
+    const l = detectLinters();
+    const avail = Object.entries(l).filter(([, v]) => v).map(([k]) => k);
+    check('linters', true, avail.length ? avail.join(', ') : 'none detected (node --check always available)');
+  } catch {}
 
   const total = allProviders().length;
   console.log('');

@@ -10,6 +10,8 @@ import { compactSession } from './commands/compact.js';
 import { TurnCheckpoint } from './checkpoints.js';
 
 const MUTATING_TOOLS = new Set(['write_file', 'edit_file', 'patch_file', 'run_command']);
+const DIAGNOSTIC_TOOLS = new Set(['write_file', 'edit_file', 'patch_file']);
+const MAX_REPAIR_ATTEMPTS = 3;
 import { projectContextLines } from './project.js';
 
 let pluginsCache = null;
@@ -76,6 +78,8 @@ export async function runTurn({
 
   const checkpoint = new TurnCheckpoint({ provider: provider.id, model });
   let checkpointDirty = false;
+  let repairAttempts = 0;
+  const touchedFiles = [];
 
   const maxTurns = cfg.maxTurns || 16;
   const startedAt = Date.now();
@@ -203,6 +207,9 @@ export async function runTurn({
               checkpoint.noteShell(argsObj.command);
             } else if (typeof argsObj.path === 'string' && argsObj.path.trim()) {
               checkpoint.recordFile(argsObj.path);
+              if (DIAGNOSTIC_TOOLS.has(call.name) && !touchedFiles.includes(argsObj.path)) {
+                touchedFiles.push(argsObj.path);
+              }
             }
           } catch {}
         }
@@ -230,6 +237,38 @@ export async function runTurn({
       session.push('tool', String(result), { tool_call_id: id, name: call.name });
     }
     if (aborted) break;
+
+    if (
+      cfg.selfHeal !== false &&
+      toolsEnabled &&
+      touchedFiles.length &&
+      repairAttempts < MAX_REPAIR_ATTEMPTS
+    ) {
+      try {
+        const { diagnosticsForFiles, projectDiagnostics } = await import('./diagnostics-engine.js');
+        const perFile = diagnosticsForFiles(touchedFiles.slice());
+        const projIssues = projectDiagnostics().filter((x) => !x.ok);
+        const hasErrors = perFile.findings.length > 0 || projIssues.length > 0;
+        if (hasErrors) {
+          repairAttempts++;
+          const report = [
+            `[auto-diagnostics after your edits — attempt ${repairAttempts}/${MAX_REPAIR_ATTEMPTS}]`,
+            ...perFile.findings.map((f) => `[file] ${f}`),
+            ...projIssues.map((x) => `[${x.tool}] ${x.detail}`),
+            'Fix these errors before finishing.',
+          ].join('\n');
+          session.push('user', report.slice(0, 8000), { autoDiagnostics: true });
+          emit({
+            type: 'status',
+            text: `diagnostics: ${perFile.findings.length + projIssues.length} issue(s) — repairing (${repairAttempts}/${MAX_REPAIR_ATTEMPTS})`,
+          });
+          ctx.messages = session.messages;
+          continue;
+        } else {
+          emit({ type: 'status', text: 'diagnostics clean ✓' });
+        }
+      } catch {}
+    }
 
     ctx.messages = session.messages;
     const updated = await runHooks(plugins.hooks, 'beforeRequest', {

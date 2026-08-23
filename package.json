@@ -13,6 +13,6 @@
   "license": "MIT",
   "scripts": {
     "start": "node bin/nova.js",
-    "test": "node tests/smoke.mjs && node tests/tui.test.mjs && node tests/tui-e2e.mjs && node tests/context.test.mjs && node tests/tools.test.mjs && node tests/sessions.test.mjs && node tests/skills.test.mjs && node tests/providers.test.mjs && node tests/compaction.test.mjs && node tests/checkpoints.test.mjs"
+    "test": "node tests/smoke.mjs && node tests/tui.test.mjs && node tests/tui-e2e.mjs && node tests/context.test.mjs && node tests/tools.test.mjs && node tests/sessions.test.mjs && node tests/skills.test.mjs && node tests/providers.test.mjs && node tests/compaction.test.mjs && node tests/checkpoints.test.mjs && node tests/diagnostics.test.mjs"
   }
 }
