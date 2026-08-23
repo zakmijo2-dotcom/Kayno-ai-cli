@@ -1,20 +1,20 @@
 import assert from 'node:assert';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 
-const HOME = '/tmp/kayno-skills-test';
+const HOME = '/tmp/nova-skills-test';
 rmSync(HOME, { recursive: true, force: true });
 process.env.NOVA_HOME = HOME;
 mkdirSync(`${HOME}/skills/low`, { recursive: true });
 
-mkdirSync('/tmp/kayno-skills-proj/.nova/skills/high-pri', { recursive: true });
-process.chdir('/tmp/kayno-skills-proj');
+mkdirSync('/tmp/nova-skills-proj/.nova/skills/high-pri', { recursive: true });
+process.chdir('/tmp/nova-skills-proj');
 
 writeFileSync(
   `${HOME}/skills/low/SKILL.md`,
   '---\nname: low\ndescription: matches alpha keyword\ntriggers: [alpha]\npriority: 1\n---\nlow body'
 );
 writeFileSync(
-  '/tmp/kayno-skills-proj/.nova/skills/high-pri/SKILL.md',
+  '/tmp/nova-skills-proj/.nova/skills/high-pri/SKILL.md',
   '---\nname: high\ndescription: also matches alpha\ntriggers: [alpha]\npriority: 9\n---\nhigh body'
 );
 mkdirSync(`${HOME}/skills/broken`, { recursive: true });

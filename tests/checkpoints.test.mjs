@@ -2,16 +2,16 @@ import assert from 'node:assert';
 import { mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 
-const WS = '/tmp/kayno-ckpt-ws';
-const HOME = '/tmp/kayno-ckpt-home';
+const WS = '/tmp/nova-ckpt-ws';
+const HOME = '/tmp/nova-ckpt-home';
 rmSync(WS, { recursive: true, force: true });
 process.chdir('/');
 rmSync(HOME, { recursive: true, force: true });
 process.env.NOVA_HOME = HOME;
 mkdirSync(join(WS, 'src'), { recursive: true });
-process.env.KAYNO_HOME = join(WS, '.kayno-home');
-mkdirSync(process.env.KAYNO_HOME, { recursive: true });
-writeFileSync(join(process.env.KAYNO_HOME, 'config.json'), JSON.stringify({ workspace: { root: WS } }));
+process.env.NOVA_HOME = join(WS, '.nova-home');
+mkdirSync(process.env.NOVA_HOME, { recursive: true });
+writeFileSync(join(process.env.NOVA_HOME, 'config.json'), JSON.stringify({ workspace: { root: WS } }));
 
 const { TurnCheckpoint, undoLast, redoLast, listCheckpoints } = await import('../src/checkpoints.js');
 const { resetWorkspaceCache } = await import('../src/workspace.js');

@@ -66,7 +66,7 @@ export async function checkPermission(toolName, { yolo = false, ask = null, deta
     throw new PermissionDeniedError(
       category,
       toolName,
-      `disabled by policy (mij config set permissions.${category} allow|ask)`
+      `disabled by policy (nova config set permissions.${category} allow|ask)`
     );
   }
   if (typeof ask === 'function') {

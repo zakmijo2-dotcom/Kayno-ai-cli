@@ -3,7 +3,7 @@ import assert from 'node:assert';
 import { PassThrough } from 'node:stream';
 
 process.env.NOVA_HOME = '/tmp/nova-tui-test-home';
-process.env.MIJ_ASCII = '1';
+process.env.NOVA_ASCII = '1';
 
 const { stripAnsi, visibleWidth, truncateVisible, wrapAnsi, sym, COLOR_ENABLED } = await import('../src/tui/ansi.js');
 const { createKeyDecoder, InputEditor, applyKeyToEditor } = await import('../src/tui/input.js');
@@ -28,7 +28,7 @@ const t5 = truncateVisible('abcdef', 5);
 ok(t5.endsWith(sym('ellipsis')) && t5.length < 'abcdef'.length, 'truncate appends ellipsis symbol');
 ok(visibleWidth(truncateVisible('abcdef', 5)) <= 5, 'truncated width respects limit');
 ok(wrapAnsi('hello world', 6).length === 2 && wrapAnsi('hello world', 6)[0] === 'hello', 'wrap breaks on words');
-ok(sym('check') === 'ok', 'ascii fallback when MIJ_ASCII=1');
+ok(sym('check') === 'ok', 'ascii fallback when NOVA_ASCII=1');
 ok(COLOR_ENABLED === false || process.env.NO_COLOR !== undefined ? true : true, 'color flag readable');
 
 console.log('key decoder');
@@ -339,7 +339,7 @@ console.log('non-interactive purity (E2E)');
   });
   await new Promise((r) => server.listen(4611, r));
 
-  const child = spawn(process.execPath, ['bin/mij.js', 'ask', '-p', 'openai', '-m', 'm', 'say something'], {
+  const child = spawn(process.execPath, ['bin/nova.js', 'ask', '-p', 'openai', '-m', 'm', 'say something'], {
     cwd: process.cwd(),
     env: { ...process.env, NOVA_HOME: '/tmp/nova-e2e-home' },
     stdio: ['pipe', 'pipe', 'pipe'],

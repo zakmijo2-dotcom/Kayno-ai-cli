@@ -4,7 +4,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const HOME = '/tmp/kayno-mcp-home';
+const HOME = '/tmp/nova-mcp-home';
 rmSync(HOME, { recursive: true, force: true });
 mkdirSync(HOME, { recursive: true });
 process.env.NOVA_HOME = HOME;

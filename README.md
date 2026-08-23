@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚡ Kayno
+# ⚡ Nova
 
 **A zero-dependency AI coding agent for your terminal.**
 
@@ -17,12 +17,12 @@ Built for speed, built for Termux — 200+ models, one binary, no bloat.
 
 ---
 
-Kayno (command: **`mij`**) is a professional coding agent that lives in your terminal — streaming TUI, agentic tool loops, workspace sandboxing, and a permission engine — while staying a **single pure-Node.js project with zero npm dependencies**.
+Nova (command: **`nova`**) is a professional coding agent that lives in your terminal — streaming TUI, agentic tool loops, workspace sandboxing, and a permission engine — while staying a **single pure-Node.js project with zero npm dependencies**.
 
 No React. No Electron. No bundler. Startup in milliseconds, runs on Android phones via Termux.
 
 ```text
-Kayno v0.1.0 │ OpenRouter / anthropic/claude-sonnet-4.5
+Nova v0.1.0 │ OpenRouter / anthropic/claude-sonnet-4.5
 /help commands · Ctrl+C cancel · Ctrl+D quit
 
 You
@@ -84,8 +84,8 @@ Designed for weak devices: incremental ANSI rendering (no full-screen clears), A
 ## 🚀 Quickstart
 
 ```bash
-mij auth set-key openrouter sk-or-...   # or export OPENROUTER_API_KEY
-mij                                      # launch the TUI
+nova auth set-key openrouter sk-or-...   # or export OPENROUTER_API_KEY
+nova                                      # launch the TUI
 ```
 
 Inside the TUI:
@@ -100,27 +100,27 @@ Inside the TUI:
 Other providers:
 
 ```bash
-mij auth login google                    # Gemini CLI-style OAuth → Code Assist
-mij chat -p google-code-assist -m gemini-2.5-pro
+nova auth login google                    # Gemini CLI-style OAuth → Code Assist
+nova chat -p google-code-assist -m gemini-2.5-pro
 
-mij auth login antigravity               # Antigravity IDE backend
-mij chat -p antigravity -m gemini-3-pro-preview
+nova auth login antigravity               # Antigravity IDE backend
+nova chat -p antigravity -m gemini-3-pro-preview
 # captured tokens instead of browser flow:
-mij auth import antigravity --access TOKEN --refresh TOKEN
+nova auth import antigravity --access TOKEN --refresh TOKEN
 
-mij chat -p ollama -m llama3.2           # fully local
+nova chat -p ollama -m llama3.2           # fully local
 ```
 
 ### Three modes
 
 | Command | Behavior |
 |---|---|
-| `mij` | Interactive TUI (same as `mij chat`) |
-| `KAYNO_TUI=0 mij chat` | Classic line REPL for dumb terminals / pipes |
-| `mij ask "question"` | One-shot, plain-text output — **zero ANSI escapes**, stdin-pipe friendly |
+| `nova` | Interactive TUI (same as `nova chat`) |
+| `NOVA_TUI=0 nova chat` | Classic line REPL for dumb terminals / pipes |
+| `nova ask "question"` | One-shot, plain-text output — **zero ANSI escapes**, stdin-pipe friendly |
 
 ```bash
-cat server.js | mij ask -p deepseek -m deepseek-chat "review this"
+cat server.js | nova ask -p deepseek -m deepseek-chat "review this"
 ```
 
 ## 🛠 Tool System
@@ -145,7 +145,7 @@ Every file tool passes through the **workspace sandbox** — paths resolving out
 Independent per-category policies — fail closed in scripts, interactive cards in the TUI:
 
 ```jsonc
-// ~/.kayno/config.json
+// ~/.nova/config.json
 {
   "permissions": {
     "read":    "allow",
@@ -174,14 +174,14 @@ Non-interactive mode never hangs: an unapproved action fails loudly with the exa
 | Command | What it does |
 |---|---|
 | `/compact [threshold]` | Summarize old turns into one message — pins file-change artifacts & original task; auto-suggested at >75% context |
-| `/undo` · `/redo` | Diff-based checkpoint rollback of agent file edits (`.mij/checkpoints/`, turn-scoped) |
+| `/undo` · `/redo` | Diff-based checkpoint rollback of agent file edits (`.nova/checkpoints/`, turn-scoped) |
 | `/tokens` | Per-session token usage (in / out / cached) |
 | `/cost` | Estimated session cost from catalog pricing ($/Mtok) |
 | `/diff` | Working-tree diff without leaving chat |
 | `/export` / `/share` | Write the transcript as markdown into the workspace |
-| `/mcp` | Connect MCP servers from `~/.config/mij/mcp.json` |
+| `/mcp` | Connect MCP servers from `~/.config/nova/mcp.json` |
 
-**Self-healing loop**: after every file edit, Kayno auto-runs available diagnostics (`node --check`, `tsc --noEmit`, `py_compile`, …) and feeds errors back to itself — max 3 repair attempts, then reports honestly.
+**Self-healing loop**: after every file edit, Nova auto-runs available diagnostics (`node --check`, `tsc --noEmit`, `py_compile`, …) and feeds errors back to itself — max 3 repair attempts, then reports honestly.
 
 **MCP support**: stdio JSON-RPC client, zero dependencies. Drop a config:
 
@@ -191,7 +191,7 @@ Non-interactive mode never hangs: an unapproved action fails loudly with the exa
 
 MCP tools appear as `mcp__server__tool`, run through the permission gate (`mcp: ask` by default).
 
-**Project rules**: `AGENT.md` → `SKILL.md` → `.mij/skills/*.md` → `.github/copilot-instructions.md` are auto-discovered and injected into the system prompt with a shared truncation budget.
+**Project rules**: `AGENT.md` → `SKILL.md` → `.nova/skills/*.md` → `.github/copilot-instructions.md` are auto-discovered and injected into the system prompt with a shared truncation budget.
 
 **Images**: attach with `@path/to/image.png` in any message — validated against the sandbox and the model's vision capability.
 
@@ -210,7 +210,7 @@ MCP tools appear as `mcp__server__tool`, run through the permission gate (`mcp: 
 
 ## 🧩 Skills & Plugins
 
-Drop `SKILL.md` anywhere under `~/.kayno/skills/` or `<project>/.nova/skills/`:
+Drop `SKILL.md` anywhere under `~/.nova/skills/` or `<project>/.nova/skills/`:
 
 ```markdown
 ---
@@ -222,7 +222,7 @@ priority: 5
 Instructions injected when the user's message matches…
 ```
 
-Plugins are plain JS modules in `~/.kayno/plugins/`:
+Plugins are plain JS modules in `~/.nova/plugins/`:
 
 ```js
 export const name = 'my-plugin';
@@ -238,9 +238,9 @@ export function setup() {
 ## 🩺 Diagnostics
 
 ```bash
-$ mij doctor
+$ nova doctor
  ok   node >= 18 — v22.22.1
- ok   config readable — ~/.kayno/config.json
+ ok   config readable — ~/.nova/config.json
  warn default provider auth — openrouter — no key yet
  ok   stored credentials — 1 entry
  ok   models.dev catalog — 3d old
@@ -253,12 +253,12 @@ Full reference at [`config.json`](#-permission-engine) keys:
 
 `provider` · `model` · `temperature` · `profile` (coder/assistant/raw) · `tools` · `yolo` · `maxTurns` · `stream` · `contextBudgetPct` · `systemOverride` · `permissions.*` · `workspace.*` · `providers.<id>.{baseUrl,model,apiKey}`
 
-Config home resolution: `$KAYNO_HOME` → `$NOVA_HOME` → existing `~/.nova` (legacy) → `~/.kayno`.
+Config home resolution: `$NOVA_HOME` → `$NOVA_HOME` → existing `~/.nova` (legacy) → `~/.nova`.
 
 ## 🏗 Architecture
 
 ```text
-bin/mij.js            entry
+bin/nova.js            entry
 src/
 ├─ cli.js             commands, flags, REPL fallback
 ├─ tui/               renderer · input/keymap · components · selectors · app
@@ -286,11 +286,11 @@ Six suites: core smoke, TUI units (editor, key decoder, palette, renderer), E2E 
 ## 🔒 Security notes
 
 - Secrets are redacted from all logs (`sk-…`, `ghp_…`, Bearer, tokens).
-- OAuth tokens live only in `~/.kayno/auth.json` (chmod-restricted home).
+- OAuth tokens live only in `~/.nova/auth.json` (chmod-restricted home).
 - The sandbox defaults to your current project; widen deliberately via `workspace.extraRoots`.
 
 ## 📄 License
 
 [MIT](LICENSE) © zakmijo2-dotcom
 
-Provider-layer architecture inspired by [OmniRoute](https://github.com/diegosouzapw/OmniRoute) (MIT) — re-implemented from scratch for Kayno's zero-dependency runtime. Catalog data by [models.dev](https://models.dev) · Google OAuth desktop pattern from the open-source [Gemini CLI](https://github.com/google-gemini/gemini-cli) · web bridges: [deepseek-free-api](https://github.com/VincentZyc/deepseek-free-api), [qwen-free-api](https://github.com/LLM-Red-Team/qwen-free-api)
+Provider-layer architecture inspired by [OmniRoute](https://github.com/diegosouzapw/OmniRoute) (MIT) — re-implemented from scratch for Nova's zero-dependency runtime. Catalog data by [models.dev](https://models.dev) · Google OAuth desktop pattern from the open-source [Gemini CLI](https://github.com/google-gemini/gemini-cli) · web bridges: [deepseek-free-api](https://github.com/VincentZyc/deepseek-free-api), [qwen-free-api](https://github.com/LLM-Red-Team/qwen-free-api)

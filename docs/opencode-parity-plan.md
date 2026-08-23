@@ -1,7 +1,7 @@
-# MIJ → OpenCode-Parity Upgrade Plan
+# NOVA → OpenCode-Parity Upgrade Plan
 
 Reference: anomalyco/opencode (architecture ideas only — no code copied).
-Rule: one commit per phase (`feat(mij): phase N - <name>`), green gates between phases,
+Rule: one commit per phase (`feat(nova): phase N - <name>`), green gates between phases,
 zero new npm dependencies for the entire plan.
 
 ## 0. Baseline (audited)
@@ -9,11 +9,11 @@ zero new npm dependencies for the entire plan.
 | Area | Status |
 |---|---|
 | Tests | 7 suites, ~120 checks, all green |
-| Entry | `bin/mij.js` → `src/cli.js` (`chat` TUI / `ask` headless) |
+| Entry | `bin/nova.js` → `src/cli.js` (`chat` TUI / `ask` headless) |
 | Tools (11) | read_file, write_file, edit_file, patch_file, grep, glob, list_dir, run_command, fetch_url, git_status, git_diff |
 | Permissions | allow/ask/deny × read/write/shell/network/git (`src/permissions.js`) |
 | Sandbox | `src/workspace.js` (`EPATHSANDBOX`) |
-| Sessions | JSON at `$KAYNO_HOME/sessions`, resume/fork/delete/search (`src/session.js`) |
+| Sessions | JSON at `$NOVA_HOME/sessions`, resume/fork/delete/search (`src/session.js`) |
 | Providers | registry/capabilities/models/adapters (`src/providers/*`) |
 | Usage tracking | partial: `usage` events exist (`src/context.js: usageTotals`), **not** persisted per-turn |
 
@@ -23,7 +23,7 @@ Working tree contains staged-but-uncommitted primitives:
 `src/tui/markdown.js`, `src/tui/screen.js`, `src/tui/modals.js`, `ansi.js(+dim)`.
 `app.js` does NOT yet consume them. All suites pass with this WIP.
 
-**Decision needed at gate:** land these as `feat(mij): phase 0 - fullscreen tui primitives`
+**Decision needed at gate:** land these as `feat(nova): phase 0 - fullscreen tui primitives`
 (recommended — they are prerequisites for Phases 1/6 UI work) or revert them.
 
 ## 1. Phase → File Map
@@ -50,7 +50,7 @@ Working tree contains staged-but-uncommitted primitives:
 - New `src/checkpoints.js`: diff-based snapshots (reverse unified patch + full content
   only for created/deleted files). One checkpoint per agent *turn* (multi-tool calls
   collapse into a single undoable unit).
-- Storage `.mij/checkpoints/<ts>-<id>.json`; added to a repo `.gitignore` snippet +
+- Storage `.nova/checkpoints/<ts>-<id>.json`; added to a repo `.gitignore` snippet +
   auto-write if git repo.
 - Hooks: wrap `executeTool` for write_file/edit_file/patch_file/run_command in
   `engine.runTurn` — capture before-state, register on success.
@@ -66,7 +66,7 @@ Working tree contains staged-but-uncommitted primitives:
   existing `project.detectProject()`.
 - Engine loop: after any file-mutating tool, auto-run diagnostics; on errors feed them
   back as a tool result (max 3 repair iterations, then honest report).
-- `mij doctor` gains a "linters available" section (`src/diagnostics.js`).
+- `nova doctor` gains a "linters available" section (`src/diagnostics.js`).
 - Tests: `tests/diagnostics.test.mjs` (broken syntax planted → detected; repair loop
   bounded; honest failure reporting).
 
@@ -74,8 +74,8 @@ Working tree contains staged-but-uncommitted primitives:
 - New `src/mcp/client.js` (JSON-RPC 2.0 over stdio lines via `child_process.spawn`,
   newline-delimited framing) + `src/mcp/sse.js` reusing the existing SSE iterator in
   `http.js` (zero-dep already proven).
-- Config `~/.config/mij/mcp.json`: `{ servers: { name: { command, args?, url? } } }`
-  (also read from `$KAYNO_HOME/mcp.json`). Example committed as `docs/mcp.example.json`.
+- Config `~/.config/nova/mcp.json`: `{ servers: { name: { command, args?, url? } } }`
+  (also read from `$NOVA_HOME/mcp.json`). Example committed as `docs/mcp.example.json`.
 - Registry bridge: MCP tools registered into `TOOL_SCHEMAS` dynamically as
   `mcp__<server>__<tool>`, executed through the same permission gate — **new permission
   category `mcp` defaulting to `ask`**; any tool whose server declares shell-like
@@ -86,7 +86,7 @@ Working tree contains staged-but-uncommitted primitives:
   initialize/list/call + malformed-frame tolerance.
 
 ### PHASE 5 — Project Rules Auto-Discovery
-- `src/rules.js`: priority scan `AGENT.md` → `SKILL.md` → `.mij/skills/*.md` →
+- `src/rules.js`: priority scan `AGENT.md` → `SKILL.md` → `.nova/skills/*.md` →
   `.github/copilot-instructions.md`; char-budget aware truncation that shares the
   Phase-1 token budget (rules never evicted by compaction).
 - Wired into `buildSystemPrompt({ rules })` (`src/prompts/system.js`) + engine call site.

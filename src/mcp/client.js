@@ -9,9 +9,9 @@ const CALL_TIMEOUT_DEFAULT = 60000;
 
 export function mcpConfigPaths() {
   return [
-    process.env.KAYNO_HOME ? join(process.env.KAYNO_HOME, 'mcp.json') : null,
     process.env.NOVA_HOME ? join(process.env.NOVA_HOME, 'mcp.json') : null,
-    join(homedir(), '.config', 'mij', 'mcp.json'),
+    process.env.NOVA_HOME ? join(process.env.NOVA_HOME, 'mcp.json') : null,
+    join(homedir(), '.config', 'nova', 'mcp.json'),
   ].filter(Boolean);
 }
 
@@ -122,7 +122,7 @@ class McpServerConnection {
     const result = await this.request('initialize', {
       protocolVersion: PROTOCOL_VERSION,
       capabilities: {},
-      clientInfo: { name: 'kayno-mij', version: '0.1.0' },
+      clientInfo: { name: 'nova-cli', version: '0.1.0' },
     }).catch((e) => {
       throw e;
     });

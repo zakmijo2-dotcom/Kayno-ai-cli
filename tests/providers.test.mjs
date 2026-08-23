@@ -2,7 +2,7 @@ import assert from 'node:assert';
 import http from 'node:http';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 
-const HOME = '/tmp/kayno-prov-home';
+const HOME = '/tmp/nova-prov-home';
 rmSync(HOME, { recursive: true, force: true });
 process.env.NOVA_HOME = HOME;
 mkdirSync(`${HOME}/cache`, { recursive: true });

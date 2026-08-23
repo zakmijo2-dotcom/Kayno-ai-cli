@@ -1,10 +1,10 @@
 import assert from 'node:assert';
 
-process.env.NOVA_HOME = '/tmp/kayno-context-home';
+process.env.NOVA_HOME = '/tmp/nova-context-home';
 const { mkdirSync, writeFileSync } = await import('node:fs');
-mkdirSync('/tmp/kayno-context-home/cache', { recursive: true });
+mkdirSync('/tmp/nova-context-home/cache', { recursive: true });
 writeFileSync(
-  '/tmp/kayno-context-home/cache/models-dev.json',
+  '/tmp/nova-context-home/cache/models-dev.json',
   JSON.stringify({
     openai: {
       models: {

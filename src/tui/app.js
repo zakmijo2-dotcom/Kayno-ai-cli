@@ -178,8 +178,8 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
     const pid = S.curProvider?.id ?? provider.id;
     if (err?.status === 401 || /\b401\b|unauthorized|invalid[ _]api[ _]key/i.test(msg)) {
       title = 'Auth error';
-      hints.push('mij auth status');
-      hints.push(`mij auth set-key ${pid} <key>`);
+      hints.push('nova auth status');
+      hints.push(`nova auth set-key ${pid} <key>`);
     } else if (err?.status === 404 || /\b404\b/.test(msg)) {
       title = 'Not found';
       hints.push('check model id (/model)');
@@ -445,7 +445,7 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
     }
     sysLine(`provider → ${p.name} · ${S.curModel}`);
     if (!p.oauth && !p.noKeyNeeded && !catalogMod.resolveApiKey(p)) {
-      sysLine(`no key yet — mij auth set-key ${p.id} <key>`);
+      sysLine(`no key yet — nova auth set-key ${p.id} <key>`);
     }
     repaint();
   }
@@ -945,7 +945,7 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
 
     renderer.printTranscript(
       [
-        `${c.bold(c.magenta('Kayno'))} ${c.dim('v0.1.0')} ${c.gray(sym('sep'))} ${provider.name} ${c.gray('/')} ${c.bold(model)}`,
+        `${c.bold(c.magenta('Nova'))} ${c.dim('v0.1.0')} ${c.gray(sym('sep'))} ${provider.name} ${c.gray('/')} ${c.bold(model)}`,
         c.dim(`/help commands · Ctrl+C cancel · Ctrl+D quit${cfg.yolo ? ' · YOLO' : ''}`),
       ].join('\n')
     );
@@ -966,7 +966,7 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
         try {
           await handleToken(token);
         } catch (err) {
-          process.stderr.write(`mij: key handler error: ${err?.message}\n`);
+          process.stderr.write(`nova: key handler error: ${err?.message}\n`);
         }
       }
       if (eofResolve) eofResolve();
@@ -996,7 +996,7 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
       process.stdin.off('end', stdinEndHandler);
       process.stdin.off('close', stdinEndHandler);
     }
-    process.stderr.write(`mij: ${err?.stack || err}\n`);
+    process.stderr.write(`nova: ${err?.stack || err}\n`);
     return 1;
   }
 }

@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { mkdirSync, rmSync, existsSync } from 'node:fs';
 
-const HOME = '/tmp/kayno-sessions-test';
+const HOME = '/tmp/nova-sessions-test';
 rmSync(HOME, { recursive: true, force: true });
 process.env.NOVA_HOME = HOME;
 mkdirSync(HOME, { recursive: true });

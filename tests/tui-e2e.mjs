@@ -28,11 +28,11 @@ function sse(res, chunks, holdMs = 0, ping = false) {
   }, holdMs);
 }
 
-function runMij(args, feedScript, timeoutMs = 15000) {
+function runNova(args, feedScript, timeoutMs = 15000) {
   return new Promise((resolve) => {
-    const child = spawn(process.execPath, ['bin/mij.js', ...args], {
+    const child = spawn(process.execPath, ['bin/nova.js', ...args], {
       cwd: process.cwd(),
-      env: { ...process.env, NOVA_HOME: HOME, KAYNO_FORCE_TUI: '1' },
+      env: { ...process.env, NOVA_HOME: HOME, NOVA_FORCE_TUI: '1' },
       stdio: ['pipe', 'pipe', 'pipe'],
     });
     let out = '';
@@ -75,13 +75,13 @@ console.log('TUI E2E: startup, streaming, clean exit');
       { choices: [{ delta: { content: 'part2' } }] },
     ]);
   });
-  const { code, out } = await runMij(['chat'], [
+  const { code, out } = await runNova(['chat'], [
     { wait: 600, data: 'hello world\r' },
     { wait: 1800, data: '\x03' },
   ]);
   if (!out.includes('hello world')) console.log('DEBUG OUTPUT:', JSON.stringify(out.slice(0, 1500)));
   ok(code === 0 || code === null, `clean exit (code=${code})`);
-  ok(out.includes('Kayno'), 'banner shows Kayno branding');
+  ok(out.includes('Nova'), 'banner shows Nova branding');
   ok(out.includes('You') && out.includes('hello world'), 'user message echoed');
   if (!out.includes('part')) console.log('DEBUG:', JSON.stringify(out.slice(0, 2500)));
   ok(out.includes('part'), 'streamed text visible');
@@ -99,7 +99,7 @@ console.log('TUI E2E: Ctrl+C during streaming cancels then second Ctrl+C exits')
   const server = await mockServer(4621, (body, res) => {
     sse(res, [{ choices: [{ delta: { content: 'slow…' } }] }], 8000, true);
   });
-  const { code, out } = await runMij(['chat', '-p', 'openai', '-m', 'test-m'], [
+  const { code, out } = await runNova(['chat', '-p', 'openai', '-m', 'test-m'], [
     { wait: 400, data: 'go\r' },
     { wait: 700, data: '\x03' },
     { wait: 600, data: '\x03' },
@@ -137,7 +137,7 @@ console.log('TUI E2E: tool confirmation via y/n keys');
       },
     ]);
   });
-  const { code, out } = await runMij(['chat'], [
+  const { code, out } = await runNova(['chat'], [
     { wait: 600, data: 'run it\r' },
     { wait: 1400, data: 'y' },
     { wait: 1100, data: '\x03' },
@@ -157,7 +157,7 @@ console.log('TUI E2E: command palette navigation (/mod → Enter → model selec
     `${HOME}/config.json`,
     JSON.stringify({ provider: 'openai', model: 'test-m', providers: { openai: { baseUrl: 'http://127.0.0.1:4623' } } })
   );
-  const { code, out } = await runMij(['chat'], [
+  const { code, out } = await runNova(['chat'], [
     { wait: 400, data: '/' },
     { wait: 200, data: 'mo' },
     { wait: 300, data: '\x1b[B' },

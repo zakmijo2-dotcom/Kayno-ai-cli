@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 
-const HOME = '/tmp/kayno-compaction-home';
+const HOME = '/tmp/nova-compaction-home';
 rmSync(HOME, { recursive: true, force: true });
 process.env.NOVA_HOME = HOME;
 mkdirSync(HOME, { recursive: true });

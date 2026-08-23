@@ -72,7 +72,7 @@ export function formatUserBlock(text) {
 }
 
 export function formatAssistantHeader() {
-  return `${c.bold(c.magenta('Kayno'))}`;
+  return `${c.bold(c.magenta('Nova'))}`;
 }
 
 function wrapPrefixed(text, prefix, indent) {

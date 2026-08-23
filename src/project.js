@@ -74,7 +74,7 @@ export function detectProject(cwd = process.cwd()) {
       break;
     }
   }
-  for (const a of ['KAYNO.md', 'AGENTS.md', 'CLAUDE.md', 'NOVA.md']) {
+  for (const a of ['AGENT.md', 'AGENTS.md', 'CLAUDE.md', 'NOVA.md']) {
     if (existsSync(join(cwd, a))) {
       p.agentsFile = a;
       break;

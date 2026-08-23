@@ -14,7 +14,7 @@ function check(label, ok, detail = '') {
 }
 
 export async function runDoctor() {
-  console.log(c.bold('Kayno doctor\n'));
+  console.log(c.bold('Nova doctor\n'));
 
   const nodeMajor = Number(process.version.slice(1).split('.')[0]);
   check('node >= 18', nodeMajor >= 18, process.version);
@@ -32,7 +32,7 @@ export async function runDoctor() {
   if (cfgOk && cfg) {
     const provider = getProvider(cfg.provider);
     if (!provider) {
-      check('default provider', false, `"${cfg.provider}" unknown (mij providers list)`);
+      check('default provider', false, `"${cfg.provider}" unknown (nova providers list)`);
     } else {
       const hasAuth =
         provider.oauth
@@ -56,12 +56,12 @@ export async function runDoctor() {
   }
 
   const cacheFile = join(NOVA_HOME, 'cache', 'models-dev.json');
-  let cacheInfo = 'not synced (mij providers sync)';
+  let cacheInfo = 'not synced (nova providers sync)';
   let cacheOk = false;
   if (existsSync(cacheFile)) {
     const ageDays = (Date.now() - statSync(cacheFile).mtimeMs) / 86400000;
     cacheOk = true;
-    cacheInfo = ageDays < 30 ? `${Math.round(ageDays)}d old` : `stale (${Math.round(ageDays)}d) — mij providers sync`;
+    cacheInfo = ageDays < 30 ? `${Math.round(ageDays)}d old` : `stale (${Math.round(ageDays)}d) — nova providers sync`;
   }
   check('models.dev catalog', cacheOk, cacheInfo);
 

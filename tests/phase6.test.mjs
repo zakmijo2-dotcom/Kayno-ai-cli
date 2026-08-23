@@ -1,7 +1,7 @@
 import assert from 'node:assert';
 import { mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 
-const WS = '/tmp/kayno-p6-ws';
+const WS = '/tmp/nova-p6-ws';
 rmSync(WS, { recursive: true, force: true });
 mkdirSync(WS, { recursive: true });
 process.env.NOVA_HOME = WS;
@@ -86,7 +86,7 @@ console.log('/export + /share');
   const out = exportTranscript(fakeSession);
   ok(existsSync(out), 'export file created in workspace');
   const md = readFileSync(out, 'utf8');
-  ok(md.includes('# Kayno session — demo') && md.includes('**User**') && md.includes('hello world'), 'markdown structure');
+  ok(md.includes('# Nova session — demo') && md.includes('**User**') && md.includes('hello world'), 'markdown structure');
   ok(md.includes('<details>'), 'tool output collapsed');
 }
 

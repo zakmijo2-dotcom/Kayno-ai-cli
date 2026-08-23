@@ -36,6 +36,6 @@ export async function* streamOpenAI({ provider, model, messages, system, tools, 
 function applyExtraHeaders(headers, provider) {
   if (provider.id === 'openrouter') {
     headers['http-referer'] = 'https://github.com/zakmijo2-dotcom/Kayno-ai-cli';
-    headers['x-title'] = 'Kayno mij CLI';
+    headers['x-title'] = 'Nova CLI';
   }
 }

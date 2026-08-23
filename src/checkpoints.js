@@ -7,7 +7,7 @@ const MAX_FILE_BYTES = 512 * 1024;
 const MAX_FILES_PER_CKPT = 20;
 
 function checkpointDir() {
-  return join(workspaceRoot(), '.mij', 'checkpoints');
+  return join(workspaceRoot(), '.nova', 'checkpoints');
 }
 
 function ensureDir() {

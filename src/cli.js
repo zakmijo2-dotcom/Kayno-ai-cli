@@ -54,7 +54,7 @@ export async function main(argv) {
     case '--version':
     case '-v':
     case 'version':
-      console.log(`mij ${VERSION}`);
+      console.log(`nova ${VERSION}`);
       return 0;
     case 'help':
     case '--help':
@@ -62,7 +62,7 @@ export async function main(argv) {
       printHelp();
       return 0;
     default:
-      console.error(`Unknown command: ${cmd}. Try mij help`);
+      console.error(`Unknown command: ${cmd}. Try nova help`);
       return 1;
   }
 }
@@ -90,7 +90,7 @@ async function resolveTarget(flags) {
   const base = loadConfig();
   const providerId = flags.provider || base.provider;
   let provider = getProvider(providerId);
-  if (!provider) throw new Error(`Unknown provider "${providerId}". See: mij providers list`);
+  if (!provider) throw new Error(`Unknown provider "${providerId}". See: nova providers list`);
   if (base.providers?.[providerId]?.baseUrl && !provider.baseUrl) {
     provider = { ...provider, baseUrl: base.providers[providerId].baseUrl };
   }
@@ -113,7 +113,7 @@ async function resolveTarget(flags) {
 }
 
 function requireModel(model) {
-  if (!model) throw new Error('No model configured. Use -m <model> or: mij config set model <name>');
+  if (!model) throw new Error('No model configured. Use -m <model> or: nova config set model <name>');
   return model;
 }
 
@@ -128,8 +128,8 @@ async function cmdChat(args) {
     else console.error('no previous session found; starting fresh');
   }
   const interactive =
-    (process.stdin.isTTY && process.stdout.isTTY && process.env.KAYNO_TUI !== '0') ||
-    process.env.KAYNO_FORCE_TUI === '1';
+    (process.stdin.isTTY && process.stdout.isTTY && process.env.NOVA_TUI !== '0') ||
+    process.env.NOVA_FORCE_TUI === '1';
   if (interactive) return cmdChatTui({ cfg, provider, model: initialModel, session });
   return cmdChatLine({ cfg, provider, model: initialModel, session });
 }
@@ -146,7 +146,7 @@ async function cmdChatTui({ cfg, provider, model, session }) {
       runPluginCommand,
       onMissingKey: (p) => {
         if (!p.oauth && !p.noKeyNeeded && !resolveApiKey(p)) {
-          console.error(`no API key for ${p.id} - mij auth set-key ${p.id} <key>`);
+          console.error(`no API key for ${p.id} - nova auth set-key ${p.id} <key>`);
         }
       },
     },
@@ -195,7 +195,7 @@ async function cmdChatLine({ cfg, provider, model, session }) {
   };
 
   repl: while (true) {
-    process.stdout.write(c.cyan('mij❯ '));
+    process.stdout.write(c.cyan('nova❯ '));
     let line = await nextLine();
     if (line === null || line === undefined) break repl;
     line = String(line).trim();
@@ -231,7 +231,7 @@ async function cmdAsk(args) {
   const { flags, positional } = parseFlags(args);
   const prompt = positional.join(' ').trim();
   if (!prompt) {
-    console.error('usage: mij ask "your question" [-p provider] [-m model]');
+    console.error('usage: nova ask "your question" [-p provider] [-m model]');
     return 1;
   }
   const { cfg, provider, model } = await resolveTarget(flags);
@@ -297,7 +297,7 @@ async function slashCommand(line, ctxx) {
       }
       state.cfg.model = rest[0];
       state.model = rest[0];
-      console.log(c.green(`model → ${rest[0]} (session)`), c.dim('(persist with: mij config set model ...)'));
+      console.log(c.green(`model → ${rest[0]} (session)`), c.dim('(persist with: nova config set model ...)'));
       return true;
     }
     case '/provider': {
@@ -425,7 +425,7 @@ async function slashCommand(line, ctxx) {
 }
 
 function banner(cfg, provider, model) {
-  console.log(`${c.bold(c.magenta('Kayno'))} ${c.dim('mij v' + VERSION)} — ${provider.name} / ${c.bold(model)}`);
+  console.log(`${c.bold(c.magenta('Nova'))} ${c.dim('nova v' + VERSION)} — ${provider.name} / ${c.bold(model)}`);
   console.log(c.dim(`tools=${cfg.tools !== false ? 'on' : 'off'} yolo=${!!cfg.yolo} profile=${cfg.profile} · /help for commands · /exit to quit\n`));
 }
 
@@ -439,7 +439,7 @@ function checkKeyHint(provider) {
   if (!key && !stored) {
     console.log(
       c.yellow(`⚠ no API key for ${provider.id}. Fix with:\n`) +
-        c.dim(`   export ${provider.env}=<key>   OR   mij auth set-key ${provider.id}\n`)
+        c.dim(`   export ${provider.env}=<key>   OR   nova auth set-key ${provider.id}\n`)
     );
   }
 }
@@ -501,7 +501,7 @@ async function cmdProviders(args) {
     const { providerModelIds: pmids } = await import('./providers/models.js');
     const ids = pmids(p.id, 60);
     if (!ids.length) {
-      console.log(c.dim('(no cached models — run mij providers sync, or use any model id)'));
+      console.log(c.dim('(no cached models — run nova providers sync, or use any model id)'));
       return 0;
     }
     for (const m of ids) {
@@ -547,7 +547,7 @@ function validateProviderRow(p) {
     level = level === 'fail' ? 'fail' : 'warn';
   }
   if (!hasUsableAuth(p)) {
-    problems.push(p.oauth ? 'not logged in (mij auth login)' : p.env ? `no key (${p.env})` : 'no key');
+    problems.push(p.oauth ? 'not logged in (nova auth login)' : p.env ? `no key (${p.env})` : 'no key');
     level = level === 'fail' ? 'fail' : 'warn';
   }
   if (p.defaultModel === '' && !p.local) {
@@ -577,14 +577,14 @@ function validateProviders(all, asJson) {
   const warnN = rows.filter((r) => r.level === 'warn').length;
   const failN = rows.filter((r) => r.level === 'fail').length;
   console.log(c.dim(`\n${rows.length} checked · ${c.green(okN + ' ready')} · ${warnN} warnings · ${failN} failures`));
-  console.log(c.dim('details per provider: mij providers info <id> · live ping: mij providers test <id>'));
+  console.log(c.dim('details per provider: nova providers info <id> · live ping: nova providers test <id>'));
   return 0;
 }
 
 async function testProvider(idOrAlias, modelOverride) {
   const p = getProvider(idOrAlias);
   if (!p) {
-    console.error(`no provider "${idOrAlias}". Try: mij providers search`);
+    console.error(`no provider "${idOrAlias}". Try: nova providers search`);
     return 1;
   }
   const model = modelOverride || p.defaultModel;
@@ -593,7 +593,7 @@ async function testProvider(idOrAlias, modelOverride) {
     return 1;
   }
   if (!hasUsableAuth(p)) {
-    console.error(c.yellow(`${p.id}: no usable auth (${p.oauth ? 'login first: mij auth login ' + p.id : p.env + ' not set'})`));
+    console.error(c.yellow(`${p.id}: no usable auth (${p.oauth ? 'login first: nova auth login ' + p.id : p.env + ' not set'})`));
     return 1;
   }
 
@@ -631,7 +631,7 @@ async function cmdModels(args) {
   if (query) {
     const hits = searchModels(query, 25);
     if (!hits.length) {
-      console.log(c.dim('(no matches in catalog — run mij providers sync)'));
+      console.log(c.dim('(no matches in catalog — run nova providers sync)'));
       return 0;
     }
     for (const m of hits) {
@@ -645,10 +645,10 @@ async function cmdModels(args) {
         .join(',');
       console.log(`${c.cyan((m.provider + '/' + m.id).padEnd(56))} ${c.dim(flags)}`);
     }
-    console.log(c.dim(`\n${hits.length} hit(s) · use: mij ask -p <provider> -m <model> "..."`));
+    console.log(c.dim(`\n${hits.length} hit(s) · use: nova ask -p <provider> -m <model> "..."`));
     return 0;
   }
-  console.log(c.dim(`catalog: ${modelCount()} models · search: mij models search "<query>"\n`));
+  console.log(c.dim(`catalog: ${modelCount()} models · search: nova models search "<query>"\n`));
   const list = searchProviders('');
   for (const p of list.slice(0, 30)) {
     if (p.defaultModel) console.log(`${c.cyan(p.id.padEnd(24))} ${p.defaultModel}`);
@@ -685,7 +685,7 @@ async function cmdAuth(args) {
   if (sub === 'set-key') {
     const [pid, key] = vals.length ? [target, vals[0]] : [null, target];
     if (!pid || !key) {
-      console.error('usage: mij auth set-key <provider> <api-key>');
+      console.error('usage: nova auth set-key <provider> <api-key>');
       return 1;
     }
     setToken(pid, { apiKey: key });
@@ -711,7 +711,7 @@ async function cmdSkills(args) {
   if (sub === 'show') {
     const s = skills.find((x) => x.name.toLowerCase() === (name || '').toLowerCase());
     if (!s) {
-      console.error('not found. mij skills list');
+      console.error('not found. nova skills list');
       return 1;
     }
     console.log(s.body);
@@ -747,7 +747,7 @@ async function cmdConfig(args) {
   }
   if (sub === 'set') {
     if (!key || value === undefined) {
-      console.error('usage: mij config set <dot.key> <value>');
+      console.error('usage: nova config set <dot.key> <value>');
       return 1;
     }
     setConfigValue(key, value);
@@ -829,28 +829,28 @@ async function cmdGit(args) {
 
 function printHelp() {
   console.log(`
-${c.bold(c.magenta('Kayno (mij)'))} — multi-provider AI agent CLI (zero dependencies) · interactive TUI: run "mij"
+${c.bold(c.magenta('Nova'))} — multi-provider AI agent CLI (zero dependencies) · interactive TUI: run "nova"
 
 ${c.bold('Usage')}
-  mij chat [-p provider] [-m model] [--yolo] [--no-tools] [--profile coder|assistant|raw] [-s "system"]
-  mij ask "question" [-p provider] [-m model]          one-shot mode (reads stdin too)
-  mij providers [list|--all|search <q>|info <id>|sync] list/sync catalog (models.dev adds hundreds)
-  mij models [search]
-  mij auth login google | antigravity                  OAuth flows
-  mij auth import antigravity --access T --refresh T   paste tokens captured elsewhere
-  mij auth set-key <provider> <key>                    store API key
-  mij auth status                                      show stored creds
-  mij skills [list|show <name>]                        SKILL.md system
-  mij plugins                                          extensions/plugins
-  mij config [get|set <k> <v>|path]
-  mij sessions [search <q>|show <id>|rm <id>]          session management
-  mij doctor                                           environment diagnostics
-  mij git [status|diff [--staged]|log [n]|branch]      quick git views
+  nova chat [-p provider] [-m model] [--yolo] [--no-tools] [--profile coder|assistant|raw] [-s "system"]
+  nova ask "question" [-p provider] [-m model]          one-shot mode (reads stdin too)
+  nova providers [list|--all|search <q>|info <id>|sync] list/sync catalog (models.dev adds hundreds)
+  nova models [search]
+  nova auth login google | antigravity                  OAuth flows
+  nova auth import antigravity --access T --refresh T   paste tokens captured elsewhere
+  nova auth set-key <provider> <key>                    store API key
+  nova auth status                                      show stored creds
+  nova skills [list|show <name>]                        SKILL.md system
+  nova plugins                                          extensions/plugins
+  nova config [get|set <k> <v>|path]
+  nova sessions [search <q>|show <id>|rm <id>]          session management
+  nova doctor                                           environment diagnostics
+  nova git [status|diff [--staged]|log [n]|branch]      quick git views
 
 ${c.bold('Examples')}
-  mij chat -p antigravity -m gemini-3-pro-preview
-  mij chat -p google-code-assist -m gemini-2.5-pro     # OAuth like Gemini CLI
-  mij ask -p openrouter -m anthropic/claude-sonnet-4.5 "explain this repo"
-  cat file.py | mij ask -p deepseek -m deepseek-chat "review this"
+  nova chat -p antigravity -m gemini-3-pro-preview
+  nova chat -p google-code-assist -m gemini-2.5-pro     # OAuth like Gemini CLI
+  nova ask -p openrouter -m anthropic/claude-sonnet-4.5 "explain this repo"
+  cat file.py | nova ask -p deepseek -m deepseek-chat "review this"
 `);
 }

@@ -11,7 +11,7 @@ import { diagnosticsForFiles, projectDiagnostics } from './diagnostics-engine.js
 const READ_CAP_BYTES = 48 * 1024;
 const GREP_IGNORE = new Set([
   'node_modules', '.git', 'dist', 'build', 'out', 'coverage',
-  '__pycache__', '.venv', 'venv', '.nova', '.kayno', '.cache', 'target',
+  '__pycache__', '.venv', 'venv', '.nova', '.nova', '.cache', 'target',
 ]);
 
 function schema(name, description, properties, required = []) {
@@ -357,7 +357,7 @@ async function toolFetchUrl({ url }) {
   }
   const res = await fetch(parsed, {
     signal: AbortSignal.timeout(30000),
-    headers: { 'user-agent': 'kayno-mij' },
+    headers: { 'user-agent': 'nova-cli' },
   });
   const text = await res.text();
   const capped = text.length > 512 * 1024 ? text.slice(0, 512 * 1024) + '\n…[truncated]' : text;

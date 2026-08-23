@@ -5,7 +5,7 @@ export async function* streamAnthropic({ provider, model, messages, system, tool
   const key = resolveApiKey(provider);
   if (!key) {
     throw new Error(
-      `No API key for anthropic. Set ANTHROPIC_API_KEY or run: mij auth set-key anthropic <key>`
+      `No API key for anthropic. Set ANTHROPIC_API_KEY or run: nova auth set-key anthropic <key>`
     );
   }
   const url = `${provider.baseUrl.replace(/\/$/, '')}/v1/messages`;

@@ -16,11 +16,11 @@ export function collectRules(cwd = process.cwd(), budget = TOTAL_BUDGET) {
     }
   }
 
-  const skillsDir = join(cwd, '.mij', 'skills');
+  const skillsDir = join(cwd, '.nova', 'skills');
   if (existsSync(skillsDir)) {
     try {
       for (const f of readdirSync(skillsDir).filter((f2) => f2.endsWith('.md')).sort()) {
-        found.push({ path: join(skillsDir, f), source: `.mij/skills/${f}`, priority: 50 + found.length });
+        found.push({ path: join(skillsDir, f), source: `.nova/skills/${f}`, priority: 50 + found.length });
       }
     } catch {}
   }

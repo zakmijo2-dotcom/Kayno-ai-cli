@@ -5,7 +5,7 @@ export async function* streamGemini({ provider, model, messages, system, tools, 
   const key = resolveApiKey(provider);
   if (!key) {
     throw new Error(
-      `No API key for ${provider.id}. Set ${provider.env || 'GEMINI_API_KEY'} or run: mij auth set-key ${provider.id} <key>`
+      `No API key for ${provider.id}. Set ${provider.env || 'GEMINI_API_KEY'} or run: nova auth set-key ${provider.id} <key>`
     );
   }
   const { contents, sysText } = toGeminiContents(messages);

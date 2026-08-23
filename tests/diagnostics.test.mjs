@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { readFileSync } from 'node:fs';
 
-const WS = '/tmp/kayno-diag-ws';
+const WS = '/tmp/nova-diag-ws';
 rmSync(WS, { recursive: true, force: true });
 mkdirSync(join(WS, 'src'), { recursive: true });
 process.env.NOVA_HOME = WS;

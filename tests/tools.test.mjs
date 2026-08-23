@@ -2,8 +2,8 @@ import assert from 'node:assert';
 import { mkdirSync, writeFileSync, readFileSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 
-const HOME = '/tmp/kayno-tools-home';
-const WS = '/tmp/kayno-ws-test/ws';
+const HOME = '/tmp/nova-tools-home';
+const WS = '/tmp/nova-ws-test/ws';
 rmSync(HOME, { recursive: true, force: true });
 rmSync(WS, { recursive: true, force: true });
 mkdirSync(join(WS, 'src'), { recursive: true });

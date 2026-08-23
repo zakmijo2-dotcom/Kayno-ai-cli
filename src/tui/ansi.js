@@ -1,7 +1,7 @@
 const isDumb = !process.env.TERM || process.env.TERM === 'dumb';
 export const COLOR_ENABLED = !process.env.NO_COLOR && !isDumb;
 export const UNICODE =
-  !process.env.MIJ_ASCII &&
+  !process.env.NOVA_ASCII &&
   !isDumb &&
   (process.env.LANG || '').match(/UTF-8/i) !== null;
 
