@@ -524,6 +524,20 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
         repaint();
         return true;
       }
+      case '/undo': {
+        const ck = await import('../checkpoints.js');
+        const res = ck.undoLast();
+        if (res.changed) commitTranscript(c.yellow(`undone ${res.id}\n`) + c.dim(res.results.join('\n')));
+        else sysLine(res.reason);
+        return true;
+      }
+      case '/redo': {
+        const ck = await import('../checkpoints.js');
+        const res = ck.redoLast();
+        if (res.changed) commitTranscript(c.green(`redone ${res.id}\n`) + c.dim(res.results.join('\n')));
+        else sysLine(res.reason);
+        return true;
+      }
       case '/compact': {
         const { compactSession: cs } = await import('../commands/compact.js');
         const { completeOnce } = await import('../providers/client.js');

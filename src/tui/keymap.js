@@ -14,6 +14,8 @@ export const COMMANDS = [
   { cmd: '/compact [threshold]', desc: 'summarize old turns to free context', aliases: [] },
   { cmd: '/tokens', desc: 'token usage per session', aliases: ['/tok'] },
   { cmd: '/cost', desc: 'estimated session cost', aliases: [] },
+  { cmd: '/undo', desc: 'revert last file changes (checkpoint)', aliases: ['Ctrl+Z'] },
+  { cmd: '/redo', desc: 're-apply undone changes', aliases: ['Ctrl+R'] },
   { cmd: '/exit', desc: 'quit', aliases: ['/quit', '/q'] },
 ];
 

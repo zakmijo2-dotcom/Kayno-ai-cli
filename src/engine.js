@@ -7,6 +7,9 @@ import { createPlainEmitter } from './tui/events.js';
 import { getModelCaps, conversationTokens, estimateTokens, pruneConversation, extractUsage, estimateCost } from './context.js';
 import { modelCost } from './providers/models.js';
 import { compactSession } from './commands/compact.js';
+import { TurnCheckpoint } from './checkpoints.js';
+
+const MUTATING_TOOLS = new Set(['write_file', 'edit_file', 'patch_file', 'run_command']);
 import { projectContextLines } from './project.js';
 
 let pluginsCache = null;
@@ -70,6 +73,9 @@ export async function runTurn({
     system,
     meta: {},
   });
+
+  const checkpoint = new TurnCheckpoint({ provider: provider.id, model });
+  let checkpointDirty = false;
 
   const maxTurns = cfg.maxTurns || 16;
   const startedAt = Date.now();
@@ -191,6 +197,15 @@ export async function runTurn({
       const toolStart = Date.now();
       try {
         if (ask) emit({ type: 'confirmation_required', id, name: call.name, args: argsObj });
+        if (MUTATING_TOOLS.has(call.name)) {
+          try {
+            if (call.name === 'run_command') {
+              checkpoint.noteShell(argsObj.command);
+            } else if (typeof argsObj.path === 'string' && argsObj.path.trim()) {
+              checkpoint.recordFile(argsObj.path);
+            }
+          } catch {}
+        }
         result = await executeTool(call.name, argsObj, { yolo: !!cfg.yolo, ask });
         emit({
           type: 'tool_complete',
@@ -271,6 +286,13 @@ export async function runTurn({
     note: autoCompactNote || undefined,
     autoCompacted: autoCompactRan,
   });
+
+  if (!aborted) {
+    const ckptId = checkpoint.finalize();
+    if (ckptId) emit({ type: 'checkpoint', id: ckptId });
+  } else {
+    checkpoint.discard();
+  }
 
   await runHooks(plugins.hooks, 'afterResponse', {
     provider: provider.id,
