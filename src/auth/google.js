@@ -58,8 +58,8 @@ async function credsFor(kind) {
   if (section.clientId && section.clientSecret) {
     return { clientId: section.clientId, clientSecret: section.clientSecret };
   }
-  if (process.env.NOVA_CLIENT_ID && process.env.NOVA_CLIENT_SECRET) {
-    return { clientId: process.env.NOVA_CLIENT_ID, clientSecret: process.env.NOVA_CLIENT_SECRET };
+  if (process.env.KAYNO_CLIENT_ID && process.env.KAYNO_CLIENT_SECRET) {
+    return { clientId: process.env.KAYNO_CLIENT_ID, clientSecret: process.env.KAYNO_CLIENT_SECRET };
   }
   return loadGeminiCliCreds();
 }
@@ -104,7 +104,7 @@ export async function oauthLogin(kind) {
         return;
       }
       res2.writeHead(200, { 'content-type': 'text/html' });
-      res2.end('<h2>NOVA authorized ✔ — you can close this tab.</h2>');
+      res2.end('<h2>Kayno (mij) authorized ✔ — you can close this tab.</h2>');
       resolve(u.searchParams.get('code'));
     });
   });

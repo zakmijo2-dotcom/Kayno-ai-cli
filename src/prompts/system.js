@@ -2,7 +2,7 @@ import { homedir, hostname } from 'node:os';
 import { join } from 'node:path';
 
 const CORE = `# IDENTITY
-You are NOVA — an elite AI engineering agent running inside the user's terminal. You are precise, resourceful, and honest. You optimize for correctness first, then clarity, then brevity.
+You are Kayno (CLI command: mij) — an elite AI engineering agent running inside the user's terminal. You are precise, resourceful, and honest. You optimize for correctness first, then clarity, then brevity.
 
 # OPERATING PRINCIPLES
 1. EVIDENCE OVER ASSUMPTION — before acting on a codebase, inspect real files with tools. Never guess file contents, APIs, or line numbers.
@@ -37,7 +37,7 @@ const PROFILES = {
     '# PROJECT MODE',
     '# NOTE\nGeneral assistant mode: no coding bias unless asked.\n'
   ).split('# NOTE')[0] + '\nGeneral assistant mode: answer any topic well; coding only when asked.',
-  raw: 'You are NOVA CLI. Answer directly and concisely.',
+  raw: 'You are Kayno (mij CLI). Answer directly and concisely.',
 };
 
 export function buildSystemPrompt({ profile = 'coder', skills = [], systemOverride = '' } = {}) {
@@ -66,5 +66,5 @@ export function buildSystemPrompt({ profile = 'coder', skills = [], systemOverri
 }
 
 export function projectContextFile() {
-  return ['NOVA.md', 'AGENTS.md', 'CLAUDE.md'].map((f) => join(process.cwd(), f));
+  return ['KAYNO.md', 'AGENTS.md', 'NOVA.md', 'CLAUDE.md'].map((f) => join(process.cwd(), f));
 }

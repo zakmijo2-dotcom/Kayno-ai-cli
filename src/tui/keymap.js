@@ -1,0 +1,46 @@
+export const COMMANDS = [
+  { cmd: '/help', desc: 'show commands and shortcuts', aliases: ['/?'] },
+  { cmd: '/new', desc: 'start a fresh session', aliases: [] },
+  { cmd: '/clear', desc: 'clear current conversation view/history', aliases: [] },
+  { cmd: '/history', desc: 'dump raw conversation history', aliases: [] },
+  { cmd: '/save <title>', desc: 'persist session with a title', aliases: [] },
+  { cmd: '/sessions', desc: 'browse saved sessions (selector)', aliases: ['/sess'] },
+  { cmd: '/session <id>', desc: 'resume a saved session', aliases: [] },
+  { cmd: '/model [id]', desc: 'pick model (selector when no arg)', aliases: ['/m'] },
+  { cmd: '/provider [id]', desc: 'switch provider (selector when no arg)', aliases: ['/p'] },
+  { cmd: '/system [query]', desc: 'preview assembled system prompt', aliases: ['/sys'] },
+  { cmd: '/skills', desc: 'list discovered skills', aliases: [] },
+  { cmd: '/reload', desc: 'reload plugins', aliases: [] },
+  { cmd: '/exit', desc: 'quit', aliases: ['/quit', '/q'] },
+];
+
+export function commandItems() {
+  return COMMANDS.map((c) => ({
+    label: c.cmd,
+    hint: c.desc,
+    keywords: c.aliases,
+    value: c.cmd,
+  }));
+}
+
+export function filterCommands(query) {
+  const q = String(query ?? '').toLowerCase().trim();
+  if (!q.startsWith('/')) return [];
+  if (q === '/') return commandItems();
+  const base = q.split(/\s+/)[0];
+  const items = commandItems();
+  const matched = items.filter(
+    (it) =>
+      it.label.toLowerCase().startsWith(base) ||
+      it.keywords.some((k) => k.startsWith(base))
+  );
+  return matched;
+}
+
+export function resolveCommandAlias(cmd) {
+  const base = String(cmd).trim().split(/\s+/)[0].toLowerCase();
+  for (const c of COMMANDS) {
+    if (c.cmd.split(/\s+/)[0] === base || c.aliases.includes(base)) return c.cmd.split(/\s+/)[0];
+  }
+  return cmd;
+}

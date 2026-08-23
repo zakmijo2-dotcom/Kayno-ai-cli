@@ -112,8 +112,40 @@ async function cmdChat(args) {
   const { flags, positional } = parseFlags(args);
   const { cfg, provider, model: initialModel } = await resolveTarget(flags);
   requireModel(initialModel);
-  const session = new Session();
-  const state = { cfg, provider, model: initialModel, session };
+  let session = new Session();
+  if (flags.continueLast) {
+    const latest = Session.latest();
+    if (latest) session = latest;
+    else console.error('no previous session found; starting fresh');
+  }
+  const interactive =
+    (process.stdin.isTTY && process.stdout.isTTY && process.env.KAYNO_TUI !== '0') ||
+    process.env.KAYNO_FORCE_TUI === '1';
+  if (interactive) return cmdChatTui({ cfg, provider, model: initialModel, session });
+  return cmdChatLine({ cfg, provider, model: initialModel, session });
+}
+
+async function cmdChatTui({ cfg, provider, model, session }) {
+  const { startTui } = await import('./tui/app.js');
+  return startTui({
+    cfg,
+    provider,
+    model,
+    session,
+    runTurn,
+    deps: {
+      runPluginCommand,
+      onMissingKey: (p) => {
+        if (!p.oauth && !p.noKeyNeeded && !resolveApiKey(p)) {
+          console.error(`no API key for ${p.id} - mij auth set-key ${p.id} <key>`);
+        }
+      },
+    },
+  });
+}
+
+async function cmdChatLine({ cfg, provider, model, session }) {
+  const state = { cfg, provider, model, session, ask: null };
 
   banner(cfg, provider, state.model);
   if (!cfg.yolo && !provider.noKeyNeeded) checkKeyHint(provider);
@@ -146,7 +178,8 @@ async function cmdChat(args) {
             waiter = res;
           });
   state.ask = async (q) => {
-    process.stdout.write(q);
+    if (typeof q === 'object') q = q.question ?? '';
+    process.stdout.write(String(q));
     const ans = await nextLine();
     const v = String(ans ?? '').trim().toLowerCase();
     return v === 'y' || v === 'yes';
@@ -286,6 +319,30 @@ async function slashCommand(line, ctxx) {
       await loadPlugins();
       console.log(c.green('plugins reloaded'));
       return true;
+    case '/sessions': {
+      const list2 = Session.list();
+      console.log(
+        list2
+          .slice(0, 15)
+          .map((x) => `${c.cyan(x.id)}  turns=${x.turns}  ${x.title}`)
+          .join('\n') || '(none yet)'
+      );
+      return true;
+    }
+    case '/session': {
+      if (!rest[0]) {
+        console.log('usage: /session <id>');
+        return true;
+      }
+      try {
+        const loaded = Session.load(rest[0]);
+        Object.assign(session, { id: loaded.id, title: loaded.title, messages: loaded.messages, createdAt: loaded.createdAt });
+        console.log(c.green(`resumed "${loaded.title}" (${loaded.messages.length} messages)`));
+      } catch (err) {
+        console.log(c.red(err.message));
+      }
+      return true;
+    }
     case '/exit':
       return 'EXIT';
     default:
@@ -295,7 +352,7 @@ async function slashCommand(line, ctxx) {
 }
 
 function banner(cfg, provider, model) {
-  console.log(`${c.bold(c.magenta('⚡ MIJ'))} ${c.dim(VERSION)} — ${provider.name} / ${c.bold(model)}`);
+  console.log(`${c.bold(c.magenta('Kayno'))} ${c.dim('mij v' + VERSION)} — ${provider.name} / ${c.bold(model)}`);
   console.log(c.dim(`tools=${cfg.tools !== false ? 'on' : 'off'} yolo=${!!cfg.yolo} profile=${cfg.profile} · /help for commands · /exit to quit\n`));
 }
 
@@ -469,8 +526,12 @@ async function cmdConfig(args) {
 
 async function cmdSessions(args) {
   const [sub, id] = args;
+  if (sub === 'rm' && id) {
+    const ok = Session.remove(id);
+    console.log(ok ? c.green(`removed ${id}`) : c.red(`not found: ${id}`));
+    return ok ? 0 : 1;
+  }
   const list = Session.list();
-  if (sub === 'rm') return 0;
   console.log(list
     .slice(0, 25)
     .map((s) => `${c.dim(new Date(s.at).toLocaleString())}  ${c.cyan(s.id)}  turns=${s.turns}  ${s.title}`)
@@ -480,7 +541,7 @@ async function cmdSessions(args) {
 
 function printHelp() {
   console.log(`
-${c.bold(c.magenta('NOVA'))} — multi-provider AI agent CLI (zero dependencies)
+${c.bold(c.magenta('Kayno (mij)'))} — multi-provider AI agent CLI (zero dependencies) · interactive TUI: run "mij"
 
 ${c.bold('Usage')}
   mij chat [-p provider] [-m model] [--yolo] [--no-tools] [--profile coder|assistant|raw] [-s "system"]

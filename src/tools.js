@@ -85,7 +85,7 @@ export async function executeTool(name, args = {}, { yolo = false, ask = null } 
       if (!yolo) {
         const ok = await mustAsk(
           ask,
-          `write_file → ${p} (${(args.content || '').length} chars)? [y/N] `
+          { question: `write_file ${p} (${(args.content || '').length} chars)? [y/N]`, name: 'write_file', args }
         );
         if (!ok) return 'User declined the write.';
       }
@@ -110,10 +110,13 @@ export async function executeTool(name, args = {}, { yolo = false, ask = null } 
       const cmd = String(args.command || '');
       if (!yolo) {
         const dangerous = /rm\s+-rf\s+\/|mkfs|dd\s+if=|:\(\)\{|shutdown|reboot/.test(cmd);
-        const q = dangerous
-          ? `DESTRUCTIVE command detected: "${cmd}". Run it? [y/N] `
-          : `run_command: ${cmd}\napprove? [y/N] `;
-        const ok = await mustAsk(ask, q);
+        const ok = await mustAsk(ask, {
+          question: dangerous
+            ? `DESTRUCTIVE command: "${cmd}". Run it? [y/N]`
+            : `run_command: ${cmd}\napprove? [y/N]`,
+          name: 'run_command',
+          args,
+        });
         if (!ok) return 'User declined this command.';
       }
       return await runShell(cmd);
@@ -128,11 +131,11 @@ export async function executeTool(name, args = {}, { yolo = false, ask = null } 
   }
 }
 
-async function mustAsk(ask, q) {
+async function mustAsk(ask, detail) {
   if (typeof ask !== 'function') {
     throw new Error('confirmation required but no interactive prompt available (use --yolo)');
   }
-  return ask(q);
+  return ask(detail.question ?? '');
 }
 
 function runShell(command) {

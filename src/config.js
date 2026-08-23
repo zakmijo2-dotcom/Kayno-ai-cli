@@ -1,8 +1,18 @@
 import { homedir } from 'node:os';
 import { join } from 'node:path';
+import { existsSync } from 'node:fs';
 import { readJson, writeJson, ensureDir, expandEnv } from './util.js';
 
-export const NOVA_HOME = process.env.NOVA_HOME || join(homedir(), '.nova');
+function resolveHome() {
+  if (process.env.KAYNO_HOME) return process.env.KAYNO_HOME;
+  if (process.env.NOVA_HOME) return process.env.NOVA_HOME;
+  const legacy = join(homedir(), '.nova');
+  if (existsSync(legacy)) return legacy;
+  return join(homedir(), '.kayno');
+}
+
+export const NOVA_HOME = resolveHome();
+export const KAYNO_HOME = NOVA_HOME;
 export const CONFIG_FILE = join(NOVA_HOME, 'config.json');
 export const AUTH_FILE = join(NOVA_HOME, 'auth.json');
 export const SESSIONS_DIR = join(NOVA_HOME, 'sessions');

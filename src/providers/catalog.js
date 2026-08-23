@@ -131,3 +131,16 @@ export function resolveApiKey(provider) {
   const stored = loadAuth().tokens?.[provider.id]?.apiKey;
   return stored ? expandEnv(stored) : null;
 }
+
+export function providerModelIds(providerId, limit = 40) {
+  const cfg = loadConfig();
+  const configured = cfg.providers?.[providerId]?.model;
+  const cache = readJson(join(CACHE_DIR, 'models-dev.json'), {});
+  const entry = cache[providerId];
+  let ids = entry?.models ? Object.keys(entry.models) : [];
+  ids = ids.filter((m) => m && m !== 'default');
+  const preset = PRESETS.find((p) => p.id === providerId);
+  if (preset?.defaultModel && !ids.includes(preset.defaultModel)) ids.unshift(preset.defaultModel);
+  if (configured && !ids.includes(configured)) ids.unshift(configured);
+  return ids.slice(0, limit);
+}

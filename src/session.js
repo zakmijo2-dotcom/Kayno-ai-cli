@@ -1,9 +1,7 @@
 import { join } from 'node:path';
 import { SESSIONS_DIR } from './config.js';
 import { readJson, writeJson, ensureDir } from './util.js';
-import { readdirSync } from 'node:fs';
-
-let counter = 0;
+import { readdirSync, statSync, unlinkSync } from 'node:fs';
 
 export class Session {
   constructor({ id = null, title = 'new', messages = [] } = {}) {
@@ -28,16 +26,45 @@ export class Session {
     });
   }
 
-  static list() {
+  static list(limit = 50) {
     ensureDir(SESSIONS_DIR);
-    return readdirSync(SESSIONS_DIR)
+    const files = readdirSync(SESSIONS_DIR)
       .filter((f) => f.endsWith('.json'))
       .map((f) => {
-        const s = readJson(join(SESSIONS_DIR, f), null);
+        const full = join(SESSIONS_DIR, f);
+        let mtime = 0;
+        try {
+          mtime = statSync(full).mtimeMs;
+        } catch {}
+        return { f, full, mtime };
+      })
+      .sort((a, b) => b.mtime - a.mtime)
+      .slice(0, limit);
+    return files
+      .map(({ full }) => {
+        const s = readJson(full, null);
         return s ? { id: s.id, title: s.title, at: s.createdAt, turns: s.messages.length } : null;
       })
-      .filter(Boolean)
-      .sort((a, b) => b.at - a.at);
+      .filter(Boolean);
+  }
+
+  static remove(id) {
+    try {
+      unlinkSync(join(SESSIONS_DIR, `${id}.json`));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  static latest() {
+    const l = Session.list(1);
+    if (!l.length) return null;
+    try {
+      return Session.load(l[0].id);
+    } catch {
+      return null;
+    }
   }
 
   static load(id) {
