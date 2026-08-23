@@ -10,6 +10,7 @@ export const EVENTS = [
   'tool_delta',
   'tool_complete',
   'tool_error',
+  'checkpoint',
   'confirmation_required',
   'confirmation_resolved',
   'usage',
