@@ -1,9 +1,10 @@
-import { chmodSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, existsSync, chmodSync } from 'node:fs';
+import { dirname } from 'node:path';
 
+const noColor = process.env.NO_COLOR || !process.stdout.isTTY;
 export const RESET = '\x1b[0m';
 export const BOLD = '\x1b[1m';
 export const DIM = '\x1b[2m';
-const noColor = process.env.NO_COLOR || !process.stdout.isTTY;
 
 function paint(code, s) {
   return noColor ? String(s) : `${code}${s}${RESET}`;
@@ -22,23 +23,15 @@ export const c = {
 
 export function readJson(file, fallback) {
   try {
-    return JSON.parse(readFileSync2(file));
+    return JSON.parse(readFileSync(file, 'utf8'));
   } catch {
     return fallback;
   }
 }
 
-import { readFileSync as _rf } from 'node:fs';
-function readFileSync2(file) {
-  return _rf(file, 'utf8');
-}
-
-import { mkdirSync, writeFileSync as _wf, existsSync } from 'node:fs';
-import { dirname } from 'node:path';
-
 export function writeJson(file, data) {
   mkdirSync(dirname(file), { recursive: true });
-  _wf(file, JSON.stringify(data, null, 2) + '\n');
+  writeFileSync(file, JSON.stringify(data, null, 2) + '\n');
 }
 
 export function ensureDir(dir) {
@@ -54,12 +47,19 @@ export function truncate(s, n = 2000) {
   return s.length > n ? s.slice(0, n) + `\n... [truncated ${s.length - n} chars]` : s;
 }
 
-export function sleep(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
+const SECRET_PATTERNS = [
+  [/sk-[A-Za-z0-9_-]{8,}/g, 'sk-***'],
+  [/ghp_[A-Za-z0-9]{20,}/g, 'ghp_***'],
+  [/github_pat_[A-Za-z0-9_]{20,}/g, 'github_pat_***'],
+  [/GOCSPX-[A-Za-z0-9_-]+/g, 'GOCSPX-***'],
+  [/Bearer\s+[A-Za-z0-9._-]{10,}/gi, 'Bearer ***'],
+  [/(access_token|refresh_token|api[_-]?key|authorization)(["'\s:=]+)[^\s"'&]+/gi, '$1$2***'],
+];
 
-export function makeExecutable(file) {
-  try {
-    chmodSync(file, 0o755);
-  } catch {}
+export function redact(s) {
+  let out = String(s ?? '');
+  for (const [re, replacement] of SECRET_PATTERNS) {
+    out = out.replace(re, replacement);
+  }
+  return out;
 }

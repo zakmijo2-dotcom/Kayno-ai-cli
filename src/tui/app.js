@@ -193,6 +193,7 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
       S.thinking = false;
       S.liveText = '';
       S.statusFlash = '';
+      S.cancelRequested = false;
       stopSpinner();
       S.abort = null;
       try { session.save(); } catch {}
@@ -533,9 +534,18 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
     switch (token.type) {
       case 'ctrl+c':
         if (S.running && S.abort) {
-          S.statusFlash = 'cancelling…';
+          if (S.cancelRequested) {
+            S.exit = true;
+            if (eofResolve) eofResolve();
+            return;
+          }
+          S.cancelRequested = true;
+          S.statusFlash = 'cancelling… press Ctrl+C again to quit';
           S.abort.abort();
           repaint();
+          setTimeout(() => {
+            S.cancelRequested = false;
+          }, 2500);
         } else {
           S.exit = true;
           if (eofResolve) eofResolve();
@@ -720,10 +730,7 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
 
     if (deps.onMissingKey) deps.onMissingKey(provider);
 
-    while (!S.exit) {
-      const token = await Promise.race([decoder.next(), eofPromise.then(() => ({ type: '__exit__' }))]);
-      await handleToken(token);
-    }
+    await eofPromise;
 
     session.save();
     cleanup();

@@ -92,6 +92,10 @@ console.log('TUI E2E: startup, streaming, clean exit');
 
 console.log('TUI E2E: Ctrl+C during streaming cancels then second Ctrl+C exits');
 {
+  writeFileSync(
+    `${HOME}/config.json`,
+    JSON.stringify({ provider: 'openai', model: 'test-m', providers: { openai: { baseUrl: 'http://127.0.0.1:4621' } } })
+  );
   const server = await mockServer(4621, (body, res) => {
     sse(res, [{ choices: [{ delta: { content: 'slow…' } }] }], 8000, true);
   });
@@ -102,6 +106,7 @@ console.log('TUI E2E: Ctrl+C during streaming cancels then second Ctrl+C exits')
   ]);
   ok(code === 0 || code === null, `exits after cancel+quit (code=${code})`);
   ok(/cancelled|cancel/i.test(out), 'cancellation surfaced to user');
+  if (!out.includes('\x1b[?25h')) console.log('DEBUG2:', JSON.stringify(out.slice(-1200)));
   ok(out.includes('\x1b[?25h'), 'terminal state restored');
   server.close();
 }
@@ -146,6 +151,10 @@ console.log('TUI E2E: tool confirmation via y/n keys');
 
 console.log('TUI E2E: command palette navigation (/mod → Enter → model selector)');
 {
+  writeFileSync(
+    `${HOME}/config.json`,
+    JSON.stringify({ provider: 'openai', model: 'test-m', providers: { openai: { baseUrl: 'http://127.0.0.1:4623' } } })
+  );
   const { code, out } = await runMij(['chat'], [
     { wait: 400, data: '/' },
     { wait: 200, data: 'mo' },
