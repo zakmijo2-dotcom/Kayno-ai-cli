@@ -14,7 +14,12 @@ mij --help
 - **Raw keyboard input**: multiline editor (Ctrl+J newline), history navigation, Home/End/Delete, Ctrl+C cancels a running turn then quits, Ctrl+L clear, Ctrl+U/Ctrl+W line editing, Tab completion. Terminal state always restored via try/finally.
 - **61 provider presets built in**: OpenAI, Anthropic, Google Gemini, DeepSeek (+web bridge), Qwen/DashScope (+web bridge), Antigravity, Google Code Assist, Vertex AI, OpenRouter, Groq, Mistral, xAI, Together, Fireworks, Perplexity, Cohere, Cerebras, SambaNova, Moonshot/Kimi, Zhipu GLM, MiniMax, SiliconFlow, Doubao, Qianfan, Ollama/LM Studio/vLLM/llama.cpp… plus one-command sync from [models.dev](https://models.dev) for **hundreds more**.
 - **OAuth flows**: `mij auth login google` (Gemini CLI OAuth → Code Assist backend) and `mij auth login antigravity`, or import captured tokens. Automatic refresh.
-- **Agent tools**: `read_file`, `write_file`, `list_dir`, `run_command`, `fetch_url` — structured confirmation cards in the TUI, multi-step tool loops across OpenAI/Anthropic/Gemini wire formats.
+- **Coding-agent tool system**: `read_file` (windowed), `write_file`, `edit_file` (exact-match replace with uniqueness guard), `patch_file` (unified diff), `grep`, `glob`, `list_dir`, `run_command` (timeout-clamped), `fetch_url`, `git_status`, `git_diff` — all token-efficient and workspace-sandboxed.
+- **Workspace sandbox**: file tools resolve paths against a project root; traversal outside is rejected (`EPATHSANDBOX`) unless extra roots are configured.
+- **Permission engine**: independent allow/ask/deny policies for read / write / shell / network / git (`config.permissions.*`); TUI shows confirmation cards, non-interactive mode fails loudly instead of hanging.
+- **Context manager**: per-model context limits (models.dev), token estimation, conversation pruning that keeps tool-call integrity, usage totals.
+- **Provider hardening**: transport retries with exponential backoff, Retry-After honoring, rate-limit handling — abort-aware.
+- **Git & project intelligence**: branch/diff/log awareness, language/package-manager/test-command detection injected as a compact project profile.
 - **Skills system**: `SKILL.md` files auto-injected by trigger matching. 5 built-ins ship.
 - **Plugins**: drop JS into `~/.nova/plugins/`; register `/commands` + hooks (`beforeRequest`, `afterResponse`, `onDelta`).
 - **Sessions**: autosave, resume by id or interactive selector, relative timestamps.
@@ -104,7 +109,7 @@ cat server.js | mij ask -p deepseek -m deepseek-chat "review this"
 
 ## Slash commands
 
-`/help /new /clear /history /save <title> /sessions /session <id> /model [id] /provider [id] /system [q] /skills /reload /exit`
+`/help /new /clear /history /save <t> /sessions /session <id> /model [id] /provider [id] /system <q> /skills /git /reload /exit`
 (aliases: `/q` `/m` `/p` `/sys` `/sess`)
 
 `/model`, `/provider`, `/sessions` open interactive selectors with readiness badges (`ready`, `needs key`, `local`, `oauth`). Secrets are never displayed.
@@ -123,7 +128,9 @@ cat server.js | mij ask -p deepseek -m deepseek-chat "review this"
 | `mij skills [list\|show name]` | skill discovery |
 | `mij plugins` | plugin inventory |
 | `mij config [get\|set k v\|path]` | configuration |
-| `mij sessions` | saved conversations |
+| `mij sessions [search q \| show id \| rm id]` | sessions: list/search/view/delete |
+| `mij doctor` | environment diagnostics (config, auth, cache, git, project) |
+| `mij git [status \| diff [--staged] \| log n \| branch]` | quick git views |
 
 REPL slash commands: `/help /new /clear /history /save <title> /model <m> /provider <id> /system <q> /skills /reload /exit`
 
