@@ -1,6 +1,7 @@
 import { readdirSync, readFileSync, existsSync, statSync } from 'node:fs';
 import { join, basename } from 'node:path';
 import { SKILLS_DIR } from '../config.js';
+import { log } from '../logger.js';
 
 export function parseFrontmatter(text) {
   const m = text.match(/^---\r?\n([\s\S]*?)\r?\n---\r?\n?/);
@@ -43,14 +44,19 @@ export function discoverSkills() {
         const raw = readFileSync(file, 'utf8');
         const { meta, body } = parseFrontmatter(raw);
         const name = meta.name || basename(file).replace(/\.skill\.md$/, '');
+        const priority = Number(meta.priority) || 0;
+        if (!meta.description && !body.trim()) {
+          log.warn(`skill "${name}" (${file}) has no description and empty body`);
+        }
         found.set(name.toLowerCase(), {
           name,
           description: meta.description || '',
+          priority,
           triggers: Array.isArray(meta.triggers)
             ? meta.triggers
             : String(meta.triggers || '')
                 .split(',')
-                .map((s) => s.trim())
+                .map((x) => x.trim())
                 .filter(Boolean),
           path: file,
           body: body.trim(),
@@ -101,6 +107,8 @@ export function matchSkills(query, skills, max = 2, threshold = 1) {
     for (const w of words) if (descTerms.includes(w)) score += 1;
     if (score >= threshold) scored.push({ skill: s, score });
   }
-  scored.sort((a, b) => b.score - a.score);
+  scored.sort(
+    (a, b) => b.skill.priority - a.skill.priority || b.score - a.score || a.skill.name.localeCompare(b.skill.name)
+  );
   return scored.slice(0, max).map((x) => x.skill);
 }

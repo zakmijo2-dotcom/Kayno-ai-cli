@@ -84,7 +84,25 @@ function normalizePlugin(mod, label) {
   return p;
 }
 
+const RESERVED_TOOLS = new Set([
+  'read_file', 'write_file', 'edit_file', 'patch_file', 'grep', 'glob',
+  'list_dir', 'run_command', 'fetch_url', 'git_status', 'git_diff',
+]);
+
 function registerPlugin(registry, plugin, scope) {
+  if (!plugin.name || typeof plugin.name !== 'string') {
+    throw new Error('plugin must export a string "name"');
+  }
+  if (Array.isArray(plugin.extraTools)) {
+    plugin.extraTools = plugin.extraTools.filter((t) => {
+      const tname = t?.function?.name ?? t?.name;
+      if (tname && RESERVED_TOOLS.has(tname)) {
+        console.error(`[plugins] ${plugin.name}: tool "${tname}" collides with a built-in; skipped`);
+        return false;
+      }
+      return true;
+    });
+  }
   registry.plugins.push({ ...plugin, scope });
   for (const h of HOOK_NAMES) if (plugin[h]) registry.hooks[h].push(plugin[h].bind(plugin));
   for (const [cmd, fn] of Object.entries(plugin.commands || {})) {
