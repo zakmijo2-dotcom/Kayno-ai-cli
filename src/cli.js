@@ -353,6 +353,7 @@ async function slashCommand(line, ctxx) {
       return true;
     }
     case '/compact': {
+      try {
       const { compactSession } = await import('./commands/compact.js');
       const { completeOnce } = await import('./providers/client.js');
       const res = await compactSession({
@@ -364,6 +365,9 @@ async function slashCommand(line, ctxx) {
         thresholdTokens: Number(rest[0]) || 6000,
       });
       console.log(res.changed ? c.green(`compacted ✓ removed ${res.removedMessages} msgs · ~${res.removedTokens} tok freed`) : c.dim(res.reason));
+      } catch (err) {
+        console.error(c.red(`compact failed: ${err.message}`));
+      }
       return true;
     }
     case '/tokens': {
