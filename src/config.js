@@ -61,6 +61,11 @@ export function saveConfig(cfg) {
   writeJson(CONFIG_FILE, cfg);
 }
 
+export function reloadConfig() {
+  cache = null;
+  return loadConfig();
+}
+
 export function setConfigValue(key, value) {
   const cfg = loadConfig();
   const parts = key.split('.');

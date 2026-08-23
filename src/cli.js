@@ -235,11 +235,11 @@ async function cmdAsk(args) {
       await runTurn({
         session,
         input: `${piped.slice(0, 100000)}\n\n${prompt}`,
-        cfg: { ...cfg, yolo: true },
+        cfg,
         provider,
         model,
-        quiet: false,
       });
+      console.log('');
       return 0;
     }
   }

@@ -4,9 +4,15 @@ export function toolMeta(name) {
   const meta = {
     read_file: { label: 'Read file', verb: 'read' },
     write_file: { label: 'Write file', verb: 'write' },
+    edit_file: { label: 'Edit file', verb: 'edit' },
+    patch_file: { label: 'Patch file', verb: 'patch' },
+    grep: { label: 'Search', verb: 'search' },
+    glob: { label: 'Find files', verb: 'find' },
     list_dir: { label: 'List directory', verb: 'scan' },
     run_command: { label: 'Run command', verb: 'run' },
     fetch_url: { label: 'Fetch URL', verb: 'fetch' },
+    git_status: { label: 'Git status', verb: 'git' },
+    git_diff: { label: 'Git diff', verb: 'git' },
   };
   return (
     meta[name] || { label: name.replace(/_/g, ' '), verb: 'run' }
@@ -17,13 +23,22 @@ export function argSummary(name, args = {}) {
   switch (name) {
     case 'read_file':
     case 'write_file':
+    case 'edit_file':
+    case 'patch_file':
       return args.path ?? '';
     case 'list_dir':
       return args.path || '.';
+    case 'grep':
+      return '/' + String(args.pattern ?? '') + '/';
+    case 'glob':
+      return args.pattern ?? '';
     case 'run_command':
       return args.command ?? '';
     case 'fetch_url':
       return args.url ?? '';
+    case 'git_status':
+    case 'git_diff':
+      return '';
     default:
       try {
         const s = JSON.stringify(args);
