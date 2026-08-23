@@ -320,6 +320,7 @@ export async function runTurn({
               system: '',
               tools: [],
               temperature: 0.2,
+              signal: AbortSignal.timeout(60000),
             }),
         });
         if (res.changed) {
