@@ -4,6 +4,7 @@ import { loadPlugins, runHooks } from './plugins/index.js';
 import { TOOL_SCHEMAS, executeTool } from './tools.js';
 import { streamChat } from './providers/client.js';
 import { createPlainEmitter } from './tui/events.js';
+import { getModelCaps, conversationTokens, estimateTokens, pruneConversation } from './context.js';
 
 let pluginsCache = null;
 export async function getPlugins() {
@@ -66,6 +67,11 @@ export async function runTurn({
   const startedAt = Date.now();
   let finalText = '';
   let aborted = false;
+  let sawThinking = false;
+
+  const caps = getModelCaps(provider.id, model);
+  const budgetPct = Math.min(Math.max(Number(cfg.contextBudgetPct) || 60, 20), 90);
+  const tokenBudget = Math.floor((caps.contextLimit * budgetPct) / 100);
 
   emit({ type: 'turn_start', input, provider: provider.id, model });
 
@@ -79,11 +85,16 @@ export async function runTurn({
     let usage = null;
     const bufferOnly = cfg.stream === false;
 
+    let requestMessages = ctx.messages;
+    if (conversationTokens(requestMessages) + estimateTokens(ctx.system || system) > tokenBudget) {
+      requestMessages = pruneConversation(requestMessages, { tokenBudget });
+    }
+
     try {
       for await (const evt of streamChat({
         provider,
         model,
-        messages: ctx.messages,
+        messages: requestMessages,
         system: ctx.system || system,
         tools: [...toolSchemas, ...plugins.tools.map(normalizePluginTool)],
         temperature: cfg.temperature ?? 0.7,
@@ -94,7 +105,13 @@ export async function runTurn({
           if (!bufferOnly) emit({ type: 'text_delta', text: evt.text });
           await runHooks(plugins.hooks, 'onDelta', { text: evt.text });
         } else if (evt.type === 'thinking') {
-          if (!bufferOnly) emit({ type: 'thinking_delta', length: evt.text.length });
+          if (!bufferOnly) {
+            if (!sawThinking) {
+              sawThinking = true;
+              emit({ type: 'thinking_start' });
+            }
+            emit({ type: 'thinking_delta', length: evt.text.length });
+          }
         } else if (evt.type === 'tool_delta') {
           const cur = pending.get(evt.index) || { id: evt.id || null, name: evt.name || '', args: '' };
           if (evt.id) cur.id = evt.id;
@@ -125,6 +142,10 @@ export async function runTurn({
     if (usage) emit({ type: 'usage', usage });
 
     const toolCalls = [...pending.values()].filter((t) => t.name);
+
+    if (text && sawThinking) {
+      emit({ type: 'thinking_end' });
+    }
 
     if (toolCalls.length === 0) {
       finalText = text;
@@ -196,6 +217,8 @@ export async function runTurn({
     finalText,
     aborted,
     durationMs: Date.now() - startedAt,
+    tokens: conversationTokens(session.messages),
+    contextLimit: caps.contextLimit,
   });
 
   await runHooks(plugins.hooks, 'afterResponse', {
