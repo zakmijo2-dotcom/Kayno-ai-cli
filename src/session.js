@@ -49,12 +49,46 @@ export class Session {
   }
 
   static remove(id) {
+    if (!/^[-a-zA-Z0-9]+$/.test(String(id))) return false;
     try {
       unlinkSync(join(SESSIONS_DIR, `${id}.json`));
       return true;
     } catch {
       return false;
     }
+  }
+
+  static search(query, limit = 20) {
+    const q = String(query ?? '').toLowerCase().trim();
+    if (!q) return Session.list(limit);
+    const results = [];
+    for (const meta of Session.list(100)) {
+      if (
+        meta.title.toLowerCase().includes(q) ||
+        meta.id.includes(q)
+      ) {
+        results.push(meta);
+        if (results.length >= limit) continue;
+      }
+    }
+    if (results.length < limit) {
+      for (const meta of Session.list(100)) {
+        if (results.some((r) => r.id === meta.id)) continue;
+        try {
+          const full = readJson(join(SESSIONS_DIR, `${meta.id}.json`), null);
+          const hit = (full?.messages ?? []).some((m) =>
+            typeof m.content === 'string' && m.content.toLowerCase().includes(q)
+          );
+          if (hit) results.push({ ...meta, matchedInBody: true });
+          if (results.length >= limit) break;
+        } catch {}
+      }
+    }
+    return results.slice(0, limit);
+  }
+
+  touch() {
+    this.createdAt = Date.now();
   }
 
   static latest() {

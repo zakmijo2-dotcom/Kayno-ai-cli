@@ -6,6 +6,7 @@ import { commonPrefix } from './selectors.js';
 import { relativeTime } from './selectors.js';
 import { filterCommands, resolveCommandAlias, COMMANDS } from './keymap.js';
 import { formatToolLine, formatStatusSegments, toolMeta, argSummary } from './components.js';
+import { isGitRepo, currentBranch } from '../git.js';
 
 const FLUSH_MS = 66;
 
@@ -64,6 +65,11 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
     return home && cwd.startsWith(home) ? '~' + cwd.slice(home.length) : cwd;
   }
 
+  let gitBranch = null;
+  try {
+    if (isGitRepo()) gitBranch = currentBranch();
+  } catch {}
+
   function statusLine() {
     const base = formatStatusSegments({
       cwdShort: shortCwd(),
@@ -73,6 +79,7 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
       toolsOn: cfg.tools !== false,
       sessionTitle: session.title,
       usageText: S.usageText,
+      branch: gitBranch,
     });
     return S.statusFlash ? `${c.yellow(S.statusFlash)} ${base}` : base;
   }
@@ -473,6 +480,20 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
         for (const s of discoverSkills()) {
           commitTranscript(`${c.cyan(s.name)} ${c.dim(`[${s.scope}]`)} — ${s.description || ''}`);
         }
+        return true;
+      }
+      case '/git': {
+        const g = await import('../git.js');
+        if (rest[0] === 'diff') commitTranscript(g.gitDiff({ staged: rest.includes('--staged') }));
+        else if (rest[0] === 'log') commitTranscript(g.gitLog({ n: Number(rest[1]) || 10 }));
+        else if (g.isGitRepo()) {
+          const st = g.gitStatus();
+          commitTranscript(
+            `branch: ${c.bold(st.branch)} · +${st.counts.added} ~${st.counts.modified} -${st.counts.deleted}\n${st.files.join('\n') || '(clean)'}`
+          );
+          gitBranch = st.branch;
+        } else sysLine('not a git repository');
+        repaint();
         return true;
       }
       case '/reload': {

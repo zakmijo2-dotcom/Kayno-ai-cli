@@ -5,6 +5,7 @@ import { TOOL_SCHEMAS, executeTool } from './tools.js';
 import { streamChat } from './providers/client.js';
 import { createPlainEmitter } from './tui/events.js';
 import { getModelCaps, conversationTokens, estimateTokens, pruneConversation } from './context.js';
+import { projectContextLines } from './project.js';
 
 let pluginsCache = null;
 export async function getPlugins() {
@@ -44,10 +45,15 @@ export async function runTurn({
   }
 
   const skills = cfg.skills !== false ? matchSkills(input, discoverSkills()) : [];
+  let projectLines = [];
+  try {
+    if (cfg.projectContext !== false) projectLines = projectContextLines();
+  } catch {}
   const system = buildSystemPrompt({
     profile: cfg.profile || 'coder',
     skills,
     systemOverride: cfg.systemOverride || '',
+    projectLines,
   });
   const toolsEnabled = cfg.tools !== false;
   const toolSchemas = toolsEnabled ? TOOL_SCHEMAS : [];

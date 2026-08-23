@@ -85,9 +85,9 @@ function wrapPrefixed(text, prefix, indent) {
   return out;
 }
 
-export function formatStatusSegments({ cwdShort, providerName, model, profile, toolsOn, sessionTitle, usageText }) {
+export function formatStatusSegments({ cwdShort, providerName, model, profile, toolsOn, sessionTitle, usageText, branch }) {
   const segs = [
-    c.gray(cwdShort),
+    c.gray(branch ? `${cwdShort} (${branch})` : cwdShort),
     c.cyan(providerName),
     model ? c.white(model) : '',
     c.yellow(profile),

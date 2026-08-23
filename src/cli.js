@@ -42,6 +42,10 @@ export async function main(argv) {
       return cmdConfig(rest);
     case 'sessions':
       return cmdSessions(rest);
+    case 'doctor':
+      return (await import('./diagnostics.js')).runDoctor(), 0;
+    case 'git':
+      return cmdGit(rest);
     case '--version':
     case '-v':
     case 'version':
@@ -525,17 +529,67 @@ async function cmdConfig(args) {
 }
 
 async function cmdSessions(args) {
-  const [sub, id] = args;
+  const [sub, id, ...rest] = args;
   if (sub === 'rm' && id) {
     const ok = Session.remove(id);
     console.log(ok ? c.green(`removed ${id}`) : c.red(`not found: ${id}`));
     return ok ? 0 : 1;
   }
+  if ((sub === 'search' || sub === '-q') && id) {
+    const results = Session.search(rest.join(' '));
+    if (!results.length) {
+      console.log('(no matches)');
+      return 0;
+    }
+    for (const r of results) {
+      console.log(`${c.cyan(r.id)}  turns=${r.turns}${r.matchedInBody ? c.dim(' (body match)') : ''}  ${r.title}`);
+    }
+    return 0;
+  }
+  if (sub === 'show' && id) {
+    try {
+      const loaded = Session.load(id);
+      for (const m of loaded.messages) {
+        const body = typeof m.content === 'string' ? m.content : JSON.stringify(m.content);
+        console.log(`${c.bold(m.role)}: ${truncate(body, 400)}`);
+      }
+      return 0;
+    } catch (err) {
+      console.error(c.red(err.message));
+      return 1;
+    }
+  }
   const list = Session.list();
   console.log(list
     .slice(0, 25)
-    .map((s) => `${c.dim(new Date(s.at).toLocaleString())}  ${c.cyan(s.id)}  turns=${s.turns}  ${s.title}`)
+    .map((s2) => `${c.dim(new Date(s2.at).toLocaleString())}  ${c.cyan(s2.id)}  turns=${s2.turns}  ${s2.title}`)
     .join('\n') || '(none yet)');
+  return 0;
+}
+
+async function cmdGit(args) {
+  const gitMod = await import('./git.js');
+  const [sub] = args;
+  if (!gitMod.isGitRepo()) {
+    console.error('not a git repository');
+    return 1;
+  }
+  if (sub === 'diff') {
+    console.log(gitMod.gitDiff({ staged: args.includes('--staged') }));
+    return 0;
+  }
+  if (sub === 'log') {
+    console.log(gitMod.gitLog({ n: Number(args[1]) || 15 }));
+    return 0;
+  }
+  const st = gitMod.gitStatus();
+  if (sub === 'branch') {
+    console.log(st.branch || '(detached)');
+    return 0;
+  }
+  console.log(`branch: ${st.branch || '(detached)'}`);
+  for (const f of st.files) console.log(` ${f}`);
+  if (!st.files.length) console.log(c.dim('(clean)'));
   return 0;
 }
 
@@ -555,7 +609,9 @@ ${c.bold('Usage')}
   mij skills [list|show <name>]                        SKILL.md system
   mij plugins                                          extensions/plugins
   mij config [get|set <k> <v>|path]
-  mij sessions                                         recent chats
+  mij sessions [search <q>|show <id>|rm <id>]          session management
+  mij doctor                                           environment diagnostics
+  mij git [status|diff [--staged]|log [n]|branch]      quick git views
 
 ${c.bold('Examples')}
   mij chat -p antigravity -m gemini-3-pro-preview
