@@ -145,6 +145,7 @@ console.log('TUI E2E: tool confirmation via y/n keys');
   ok(code === 0 || code === null, `exit ok (${code})`);
   ok(/Run command/i.test(out), 'tool card shown with label');
   ok(/echo confirm-test/.test(out), 'tool target shown');
+  if (!out.includes('confirm-test') || !/exit 0/.test(out)) console.log('DEBUG3:', JSON.stringify(out.slice(-1600)));
   ok(out.includes('confirm-test') && /exit 0/.test(out), 'approved tool executed with exit badge');
   server.close();
 }

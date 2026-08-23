@@ -29,6 +29,7 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
     curProvider: provider,
     curModel: model,
     pendingConfirm: null,
+    stashedConfirm: null,
   };
 
   let flushTimer = null;
@@ -154,6 +155,12 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
   function makeAsk() {
     return (_question) =>
       new Promise((resolve) => {
+        if (S.stashedConfirm !== null) {
+          const pre = S.stashedConfirm;
+          S.stashedConfirm = null;
+          resolve(pre);
+          return;
+        }
         S.pendingConfirm = { resolve };
       });
   }
@@ -194,6 +201,7 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
       S.liveText = '';
       S.statusFlash = '';
       S.cancelRequested = false;
+      S.stashedConfirm = null;
       stopSpinner();
       S.abort = null;
       try { session.save(); } catch {}
@@ -515,6 +523,13 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
   }
 
   async function handleToken(token) {
+    if (S.running && !S.pendingConfirm) {
+      const early = token.type === 'char' ? String(token.value).toLowerCase() : '';
+      if (early === 'y' || early === 'n') {
+        S.stashedConfirm = early === 'y';
+        return;
+      }
+    }
     if (S.pendingConfirm) {
       const t = token.type === 'char' ? String(token.value).toLowerCase() : token.type;
       if (t === 'y' || t === 'Y') {
