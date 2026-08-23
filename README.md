@@ -267,4 +267,4 @@ Six suites: core smoke, TUI units (editor, key decoder, palette, renderer), E2E 
 
 [MIT](LICENSE) © zakmijo2-dotcom
 
-Credits: provider catalog by [models.dev](https://models.dev) · Google OAuth desktop pattern from the open-source [Gemini CLI](https://github.com/google-gemini/gemini-cli) · web bridges: [deepseek-free-api](https://github.com/VincentZyc/deepseek-free-api), [qwen-free-api](https://github.com/LLM-Red-Team/qwen-free-api)
+Provider-layer architecture inspired by [OmniRoute](https://github.com/diegosouzapw/OmniRoute) (MIT) — re-implemented from scratch for Kayno's zero-dependency runtime. Catalog data by [models.dev](https://models.dev) · Google OAuth desktop pattern from the open-source [Gemini CLI](https://github.com/google-gemini/gemini-cli) · web bridges: [deepseek-free-api](https://github.com/VincentZyc/deepseek-free-api), [qwen-free-api](https://github.com/LLM-Red-Team/qwen-free-api)

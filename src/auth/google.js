@@ -2,7 +2,7 @@ import http from 'node:http';
 import { exec } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { readJson, writeJson } from '../util.js';
-import { CACHE_DIR } from '../config.js';
+import { CACHE_DIR, loadConfig } from '../config.js';
 import { join } from 'node:path';
 import { fetchJson } from '../http.js';
 import { getToken, setToken } from './store.js';

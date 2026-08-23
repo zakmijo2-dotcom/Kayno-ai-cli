@@ -9,8 +9,13 @@ import {
   searchProviders,
   syncFromModelsDev,
   resolveApiKey,
-  PRESETS,
+  hasUsableAuth,
+  registryStats,
 } from './providers/catalog.js';
+import { PROVIDER_DEFS as PRESETS } from './providers/registry.js';
+import { getCapabilities } from './providers/capabilities.js';
+import { searchModels, modelCount, findModel } from './providers/models.js';
+import { adapterFor } from './providers/client.js';
 import { loadAuth, getToken, setToken, maskSecret } from './auth/store.js';
 import { oauthLogin } from './auth/google.js';
 import { antigravityImportToken } from './auth/antigravity.js';
@@ -376,46 +381,216 @@ function checkKeyHint(provider) {
 }
 
 async function cmdProviders(args) {
-  const [sub, q] = args;
+  const [sub, ...rest] = args;
   if (sub === 'sync') {
     const n = await syncFromModelsDev();
     console.log(c.green(`synced ${n} providers from models.dev into cache`));
     return 0;
   }
   if (sub === 'search') {
-    const results = searchProviders(q || '');
-    printProviderTable(results);
+    printProviderTable(searchProviders(rest.join(' ') || ''));
     return 0;
   }
   if (sub === 'info') {
-    const p = getProvider(q);
+    const p = getProvider(rest[0]);
     if (!p) {
-      console.error(`no provider "${q}"`);
+      console.error(`no provider "${rest[0]}"`);
       return 1;
     }
-    console.log(JSON.stringify(p, null, 2));
+    const caps = p.defaultModel ? getCapabilities(p.id, p.defaultModel) : null;
+    const auth = p.oauth ? 'oauth' : p.noKeyNeeded ? 'none' : resolveApiKey(p) ? 'api-key ✓' : 'missing';
+    console.log(
+      JSON.stringify(
+        {
+          id: p.id,
+          name: p.name,
+          category: p.category,
+          type: p.type,
+          auth,
+          baseUrl: p.baseUrl || '(unset)',
+          defaultModel: p.defaultModel || '(unset)',
+          aliases: p.aliases ?? [],
+          capabilities: caps
+            ? {
+                contextLimit: caps.contextLimit,
+                tools: caps.tools,
+                reasoning: caps.reasoning,
+                vision: caps.vision,
+                streaming: caps.streaming,
+              }
+            : undefined,
+          note: p.note || undefined,
+        },
+        null,
+        2
+      )
+    );
     return 0;
   }
-  const list = sub === '--all' ? allProviders() : PRESETS;
+  if (sub === 'models') {
+    const pid = rest[0];
+    const p = pid ? getProvider(pid) : null;
+    if (!p) {
+      console.error(`no provider "${pid}"`);
+      return 1;
+    }
+    const { providerModelIds: pmids } = await import('./providers/models.js');
+    const ids = pmids(p.id, 60);
+    if (!ids.length) {
+      console.log(c.dim('(no cached models — run mij providers sync, or use any model id)'));
+      return 0;
+    }
+    for (const m of ids) {
+      const caps = getCapabilities(p.id, m);
+      const flags = [
+        `${(caps.contextLimit / 1000).toFixed(0)}k`,
+        caps.tools ? 'tools' : '',
+        caps.reasoning ? 'reasoning' : '',
+        caps.vision ? 'vision' : '',
+      ]
+        .filter(Boolean)
+        .join(',');
+      console.log(`${c.cyan(m.padEnd(44))} ${c.dim(flags)}`);
+    }
+    return 0;
+  }
+  if (sub === 'validate') {
+    return validateProviders(args.includes('--all'), args.includes('--json'));
+  }
+  if (sub === 'test') {
+    return testProvider(rest[0], rest[1] === '-m' ? rest[2] : undefined);
+  }
+  const list = sub === '--all' ? allProviders() : PRESETS.map(normalize);
   printProviderTable(list);
-  console.log(c.dim(`\n${PRESETS.length} builtin presets · ${allProviders().length} total after models.dev sync (mij providers sync)\n`));
+  const stats = registryStats();
+  console.log(c.dim(`\n${stats.total} builtin presets (${Object.entries(stats.byCategory).map(([k, v]) => k + ':' + v).join(' · ')}) · ${allProviders().length} total after sync\n`));
   return 0;
 }
 
-function printProviderTable(list) {
-  const cfg = loadConfig();
+function normalize(d) {
+  return d;
+}
+
+function validateProviderRow(p) {
+  const problems = [];
+  let level = 'ok';
+  if (!adapterFor(p.type)) {
+    problems.push(`unknown adapter type "${p.type}"`);
+    level = 'fail';
+  }
+  if (!p.baseUrl && !['oauth', 'local'].includes(p.category)) {
+    problems.push('baseUrl not set');
+    level = level === 'fail' ? 'fail' : 'warn';
+  }
+  if (!hasUsableAuth(p)) {
+    problems.push(p.oauth ? 'not logged in (mij auth login)' : p.env ? `no key (${p.env})` : 'no key');
+    level = level === 'fail' ? 'fail' : 'warn';
+  }
+  if (p.defaultModel === '' && !p.local) {
+    problems.push('no default model');
+    level = level === 'fail' ? 'fail' : 'warn';
+  }
+  return { level, problems };
+}
+
+function validateProviders(all, asJson) {
+  const list = all ? allProviders() : PRESETS.map(normalize);
+  const rows = [];
   for (const p of list) {
-    const hasKey = p.oauth ? !!getToken(p.authKind || p.id) : !!(resolveApiKey(p) || p.noKeyNeeded);
-    const mark = p.oauth ? 'oauth' : p.noKeyNeeded ? 'local' : hasKey ? c.green('ready') : c.yellow('needs key');
-    const cur = cfg.provider === p.id ? c.bold(' *') : '';
-    console.log(`${cur.padEnd(2)} ${c.cyan(p.id.padEnd(24))} ${mark.padEnd(16)} ${c.dim(p.name)}${p.defaultModel ? c.dim(' · ' + p.defaultModel) : ''}`);
+    const { level, problems } = validateProviderRow(p);
+    rows.push({ id: p.id, category: p.category, level, problems });
+  }
+  if (asJson) {
+    console.log(JSON.stringify(rows.filter((r) => r.problems.length), null, 2));
+    return 0;
+  }
+  for (const r of rows) {
+    if (r.level === 'ok') continue;
+    const mark = r.level === 'fail' ? c.red('✗') : c.yellow('!');
+    console.log(`${mark} ${c.cyan(r.id.padEnd(24))} ${r.problems.join('; ')}`);
+  }
+  const okN = rows.filter((r) => r.level === 'ok').length;
+  const warnN = rows.filter((r) => r.level === 'warn').length;
+  const failN = rows.filter((r) => r.level === 'fail').length;
+  console.log(c.dim(`\n${rows.length} checked · ${c.green(okN + ' ready')} · ${warnN} warnings · ${failN} failures`));
+  console.log(c.dim('details per provider: mij providers info <id> · live ping: mij providers test <id>'));
+  return 0;
+}
+
+async function testProvider(idOrAlias, modelOverride) {
+  const p = getProvider(idOrAlias);
+  if (!p) {
+    console.error(`no provider "${idOrAlias}". Try: mij providers search`);
+    return 1;
+  }
+  const model = modelOverride || p.defaultModel;
+  if (!model) {
+    console.error(`no default model for ${p.id}; pass -m <model>`);
+    return 1;
+  }
+  if (!hasUsableAuth(p)) {
+    console.error(c.yellow(`${p.id}: no usable auth (${p.oauth ? 'login first: mij auth login ' + p.id : p.env + ' not set'})`));
+    return 1;
+  }
+
+  const { streamChat } = await import('./providers/client.js');
+  process.stdout.write(c.dim(`testing ${p.id}/${model} … `));
+  const started = Date.now();
+  try {
+    let text = '';
+    for await (const evt of streamChat({
+      provider: p,
+      model,
+      messages: [{ role: 'user', content: 'Reply with exactly: OK' }],
+      system: '',
+      tools: [],
+      temperature: 0,
+      maxTokens: 16,
+      signal: AbortSignal.timeout(45000),
+    })) {
+      if (evt.type === 'text') text += evt.text;
+    }
+    const ms = Date.now() - started;
+    console.log(c.green(`✓ ${ms}ms`), c.dim(truncate(text.trim().replace(/\n/g, ' '), 40)));
+    return 0;
+  } catch (err) {
+    const ms = Date.now() - started;
+    console.log(c.red(`✗ (${ms}ms)`));
+    console.error(c.red(String(err.message).split('\n')[0].slice(0, 200)));
+    return 1;
   }
 }
 
 async function cmdModels(args) {
-  const [, q] = args;
-  console.log(c.dim('Tip: use the provider dashboard or `mij providers info <id>`; OpenAI-compatible providers accept any model id.\n'));
-  const list = searchProviders(q || '');
+  const [sub, qRaw] = args;
+  const q = sub === 'search' ? qRaw : rest_join(sub, qRaw);
+  function rest_join(a, b) {
+    void a;
+    return b;
+  }
+  const query = sub === 'search' ? qRaw : q;
+  if (query) {
+    const hits = searchModels(query, 25);
+    if (!hits.length) {
+      console.log(c.dim('(no matches in catalog — run mij providers sync)'));
+      return 0;
+    }
+    for (const m of hits) {
+      const flags = [
+        m.contextLimit ? `${(m.contextLimit / 1000).toFixed(0)}k` : '',
+        m.tools ? 'tools' : '',
+        m.reasoning ? 'reasoning' : '',
+        m.vision ? 'vision' : '',
+      ]
+        .filter(Boolean)
+        .join(',');
+      console.log(`${c.cyan((m.provider + '/' + m.id).padEnd(56))} ${c.dim(flags)}`);
+    }
+    console.log(c.dim(`\n${hits.length} hit(s) · use: mij ask -p <provider> -m <model> "..."`));
+    return 0;
+  }
+  console.log(c.dim(`catalog: ${modelCount()} models · search: mij models search "<query>"\n`));
+  const list = searchProviders('');
   for (const p of list.slice(0, 30)) {
     if (p.defaultModel) console.log(`${c.cyan(p.id.padEnd(24))} ${p.defaultModel}`);
   }

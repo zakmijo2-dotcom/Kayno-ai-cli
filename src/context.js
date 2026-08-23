@@ -1,8 +1,4 @@
-import { readJson } from './util.js';
-import { CACHE_DIR } from './config.js';
-import { join } from 'node:path';
-
-const FALLBACK_CONTEXT = 128_000;
+import { getCapabilities } from './providers/capabilities.js';
 
 export function estimateTokens(text) {
   if (!text) return 0;
@@ -23,22 +19,14 @@ export function conversationTokens(messages) {
 }
 
 export function getModelCaps(providerId, modelId) {
-  const cache = readJson(join(CACHE_DIR, 'models-dev.json'), {});
-  const entry = cache[providerId];
-  const model = modelId && entry?.models ? entry.models[modelId] : null;
-  const partial = modelId ? modelId.split('/').pop() : '';
-  const fuzzy = !model && entry?.models
-    ? Object.entries(entry.models).find(([k]) => k === partial || k.startsWith(partial))?.[1]
-    : null;
-  const m = model || fuzzy || {};
-  const input = m.modalities?.input ?? [];
+  const caps = getCapabilities(providerId, modelId);
   return {
-    contextLimit: m.limit?.context ?? FALLBACK_CONTEXT,
-    outputLimit: m.limit?.output ?? 8192,
-    tools: m.tool_call !== false,
-    reasoning: !!m.reasoning,
-    vision: input.includes('image'),
-    known: !!(model || fuzzy),
+    contextLimit: caps.contextLimit,
+    outputLimit: caps.outputLimit,
+    tools: caps.tools,
+    reasoning: caps.reasoning,
+    vision: caps.vision,
+    known: caps.known,
   };
 }
 
