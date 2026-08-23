@@ -146,7 +146,7 @@ export async function runTurn({
               sawThinking = true;
               emit({ type: 'thinking_start' });
             }
-            emit({ type: 'thinking_delta', length: evt.text.length });
+            emit({ type: 'thinking_delta', text: evt.text, length: evt.text.length });
           }
         } else if (evt.type === 'tool_delta') {
           const cur = pending.get(evt.index) || { id: evt.id || null, name: evt.name || '', args: '' };

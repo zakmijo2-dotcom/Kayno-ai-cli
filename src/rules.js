@@ -41,8 +41,9 @@ export function collectRules(cwd = process.cwd(), budget = TOTAL_BUDGET) {
       continue;
     }
     if (!content) continue;
-    const capped = content.length > remaining ? content.slice(0, remaining - 20) + '\n…[truncated]' : content;
-    remaining -= Math.min(content.length + 1, remaining);
+    const capped =
+      content.length > remaining ? content.slice(0, Math.max(0, remaining - 20)) + '\n…[truncated]' : content;
+    remaining -= capped.length + 1;
     rules.push({ ...entry, content: capped, truncated: content.length > capped.length });
   }
   return rules;

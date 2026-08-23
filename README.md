@@ -169,6 +169,32 @@ Non-interactive mode never hangs: an unapproved action fails loudly with the exa
 - **Transport retries**: exponential backoff on 429/5xx/network errors, honors `Retry-After`, fully abort-aware.
 - **Usage tracking**: prompt/completion tokens surfaced live in the status bar.
 
+## 🧠 Agent Power Tools
+
+| Command | What it does |
+|---|---|
+| `/compact [threshold]` | Summarize old turns into one message — pins file-change artifacts & original task; auto-suggested at >75% context |
+| `/undo` · `/redo` | Diff-based checkpoint rollback of agent file edits (`.mij/checkpoints/`, turn-scoped) |
+| `/tokens` | Per-session token usage (in / out / cached) |
+| `/cost` | Estimated session cost from catalog pricing ($/Mtok) |
+| `/diff` | Working-tree diff without leaving chat |
+| `/export` / `/share` | Write the transcript as markdown into the workspace |
+| `/mcp` | Connect MCP servers from `~/.config/mij/mcp.json` |
+
+**Self-healing loop**: after every file edit, Kayno auto-runs available diagnostics (`node --check`, `tsc --noEmit`, `py_compile`, …) and feeds errors back to itself — max 3 repair attempts, then reports honestly.
+
+**MCP support**: stdio JSON-RPC client, zero dependencies. Drop a config:
+
+```json
+{ "servers": { "fs": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "."] } } }
+```
+
+MCP tools appear as `mcp__server__tool`, run through the permission gate (`mcp: ask` by default).
+
+**Project rules**: `AGENT.md` → `SKILL.md` → `.mij/skills/*.md` → `.github/copilot-instructions.md` are auto-discovered and injected into the system prompt with a shared truncation budget.
+
+**Images**: attach with `@path/to/image.png` in any message — validated against the sandbox and the model's vision capability.
+
 ## ⌨️ Keyboard
 
 | Key | Action |

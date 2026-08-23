@@ -352,6 +352,66 @@ async function slashCommand(line, ctxx) {
       }
       return true;
     }
+    case '/compact': {
+      const { compactSession } = await import('./commands/compact.js');
+      const { completeOnce } = await import('./providers/client.js');
+      const res = await compactSession({
+        session,
+        summarize: async (prompt) => {
+          const target = state.provider;
+          return completeOnce({ provider: target, model: state.model, messages: [{ role: 'user', content: prompt }], temperature: 0.2 });
+        },
+        thresholdTokens: Number(rest[0]) || 6000,
+      });
+      console.log(res.changed ? c.green(`compacted ✓ removed ${res.removedMessages} msgs · ~${res.removedTokens} tok freed`) : c.dim(res.reason));
+      return true;
+    }
+    case '/tokens': {
+      const t = session.usageTotals?.() ?? {};
+      console.log(`turns: ${(session.usage ?? []).length} · in:${t.input} out:${t.output} cached:${t.cached}`);
+      return true;
+    }
+    case '/cost': {
+      const { modelCost } = await import('./providers/models.js');
+      const { estimateCost, formatCost } = await import('./context.js');
+      const rate = modelCost(state.provider.id, state.model);
+      if (!rate) {
+        console.log(c.dim('pricing unavailable for this model'));
+        return true;
+      }
+      const total = estimateCost(rate, session.usageTotals?.() ?? {});
+      console.log(c.bold(formatCost(total)));
+      return true;
+    }
+    case '/undo': {
+      const ck = await import('./checkpoints.js');
+      const res = ck.undoLast();
+      console.log(res.changed ? c.yellow(res.results.join('\n')) : c.dim(res.reason));
+      return true;
+    }
+    case '/redo': {
+      const ck = await import('./checkpoints.js');
+      const res = ck.redoLast();
+      console.log(res.changed ? c.green(res.results.join('\n')) : c.dim(res.reason));
+      return true;
+    }
+    case '/diff': {
+      const g = await import('./git.js');
+      console.log(g.isGitRepo() ? g.gitDiff({}) : c.red('not a git repository'));
+      return true;
+    }
+    case '/export': {
+      const { exportTranscript } = await import('./tui/export.js');
+      console.log(c.green('exported → ' + exportTranscript(session, rest.join(' ') || undefined)));
+      return true;
+    }
+    case '/mcp': {
+      const mcp = await import('./mcp/client.js');
+      const results = await mcp.connectServers();
+      for (const r of results) console.log(r.ok ? c.green(`✓ ${r.name}: ${r.tools} tools`) : c.red(`✗ ${r.name}: ${r.error}`));
+      if (!results.length) console.log(c.dim('no servers configured (docs/mcp.example.json)'));
+      return true;
+    }
     case '/exit':
       return 'EXIT';
     default:
@@ -366,7 +426,7 @@ function banner(cfg, provider, model) {
 }
 
 function printReplHelp() {
-  console.log(`/help /new /clear /history /save <title> /model <m> /provider <id> /system <query> /skills /reload /exit`);
+  console.log(`/help /new /clear /history /save /sessions /session /model /provider /system /skills /git /diff /tokens /cost /compact /undo /redo /export /mcp /reload /exit`);
 }
 
 function checkKeyHint(provider) {
@@ -562,13 +622,8 @@ async function testProvider(idOrAlias, modelOverride) {
 }
 
 async function cmdModels(args) {
-  const [sub, qRaw] = args;
-  const q = sub === 'search' ? qRaw : rest_join(sub, qRaw);
-  function rest_join(a, b) {
-    void a;
-    return b;
-  }
-  const query = sub === 'search' ? qRaw : q;
+  const [sub, ...rest] = args;
+  const query = sub === 'search' ? rest.join(' ') : sub && !['search'].includes(sub) ? [sub, ...rest].join(' ') : '';
   if (query) {
     const hits = searchModels(query, 25);
     if (!hits.length) {

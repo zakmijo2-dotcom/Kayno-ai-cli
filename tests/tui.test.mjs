@@ -254,12 +254,14 @@ console.log('engine events + confirmation + abort');
     sse(res, [{ choices: [{ delta: { reasoning_content: 'SECRET-REASONING' } }] }, { choices: [{ delta: { content: 'ok' } }] }]);
   });
   const ev2 = [];
+  const sess2 = new Session();
   await runTurn({
-    session: new Session(), input: 'q', cfg: { ...cfg, yolo: true }, provider, model: 'm',
+    session: sess2, input: 'q', cfg: { ...cfg, yolo: true }, provider, model: 'm',
     emit: (e) => ev2.push(e),
   });
-  ok(ev2.some((e) => e.type === 'thinking_delta' && JSON.stringify(e).includes('length')), 'thinking redacted to length only');
-  ok(!ev2.some((e) => JSON.stringify(e).includes('SECRET-REASONING')), 'no chain-of-thought leaked in events');
+  ok(ev2.some((e) => e.type === 'thinking_delta'), 'thinking events emitted for collapsible UI');
+  ok(!session.messages.some((m) => String(m.content ?? '').includes('SECRET-REASONING')), 'reasoning never persisted into session messages');
+  ok(!JSON.stringify(session.messages).includes('SECRET-REASONING'), 'saved session stays reasoning-free');
   server.close();
 
   server = await mockServer((body, res) => {
