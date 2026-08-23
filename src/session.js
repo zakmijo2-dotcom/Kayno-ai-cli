@@ -4,11 +4,29 @@ import { readJson, writeJson, ensureDir } from './util.js';
 import { readdirSync, statSync, unlinkSync } from 'node:fs';
 
 export class Session {
-  constructor({ id = null, title = 'new', messages = [] } = {}) {
+  constructor({ id = null, title = 'new', messages = [], usage = [] } = {}) {
     this.id = id || `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     this.title = title.slice(0, 60);
     this.messages = messages;
+    this.usage = Array.isArray(usage) ? usage : [];
     this.createdAt = Date.now();
+  }
+
+  recordUsage(u) {
+    this.usage = this.usage ?? [];
+    this.usage.push({ ...u, at: Date.now() });
+    if (this.usage.length > 500) this.usage = this.usage.slice(-400);
+  }
+
+  usageTotals() {
+    return (this.usage ?? []).reduce(
+      (acc, u) => ({
+        input: acc.input + (u.input ?? 0),
+        output: acc.output + (u.output ?? 0),
+        cached: acc.cached + (u.cached ?? 0),
+      }),
+      { input: 0, output: 0, cached: 0 }
+    );
   }
 
   push(role, content, extra = {}) {
@@ -23,6 +41,7 @@ export class Session {
       title: this.title,
       createdAt: this.createdAt,
       messages: this.messages,
+      usage: this.usage ?? [],
     });
   }
 

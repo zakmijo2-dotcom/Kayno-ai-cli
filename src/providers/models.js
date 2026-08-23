@@ -24,6 +24,7 @@ function loadIndex() {
           tools: m.tool_call !== false,
           reasoning: !!m.reasoning,
           vision: (m.modalities?.input ?? []).includes('image'),
+          cost: m.cost ?? null,
         });
       }
       index.set(providerId, models);
@@ -96,4 +97,9 @@ export function providerModelIds(providerId, limit = 40) {
     if (ids.length >= limit) break;
   }
   return ids.filter(Boolean).slice(0, limit);
+}
+
+export function modelCost(providerId, modelId) {
+  const hit = findModel(`${providerId}/${modelId}`) ?? findModel(modelId);
+  return hit?.cost ?? null;
 }

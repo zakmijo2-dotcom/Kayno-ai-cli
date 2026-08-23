@@ -11,6 +11,9 @@ export const COMMANDS = [
   { cmd: '/system [query]', desc: 'preview assembled system prompt', aliases: ['/sys'] },
   { cmd: '/skills', desc: 'list discovered skills', aliases: [] },
   { cmd: '/reload', desc: 'reload plugins', aliases: [] },
+  { cmd: '/compact [threshold]', desc: 'summarize old turns to free context', aliases: [] },
+  { cmd: '/tokens', desc: 'token usage per session', aliases: ['/tok'] },
+  { cmd: '/cost', desc: 'estimated session cost', aliases: [] },
   { cmd: '/exit', desc: 'quit', aliases: ['/quit', '/q'] },
 ];
 

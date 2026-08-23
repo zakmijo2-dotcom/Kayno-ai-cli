@@ -86,3 +86,36 @@ export function usageTotals(events) {
   }
   return { input, output };
 }
+
+export function extractUsage(raw) {
+  const u = raw ?? {};
+  const input = u.prompt_tokens ?? u.input_tokens ?? 0;
+  const output = u.completion_tokens ?? u.output_tokens ?? 0;
+  const cached =
+    u.prompt_tokens_details?.cached_tokens ??
+    u.cache_read_input_tokens ??
+    u.cached_tokens ??
+    0;
+  return { input, output, cached };
+}
+
+export function estimateCost(cost, usage) {
+  if (!cost || typeof cost !== 'object') return null;
+  const input = Number(cost.input) || 0;
+  const output = Number(cost.output) || 0;
+  const cachedRate = Number(cost.cache_read ?? cost.input) || input;
+  const billedInput = Math.max(0, (usage.input ?? 0) - (usage.cached ?? 0));
+  const dollars =
+    (billedInput * input +
+      (usage.cached ?? 0) * cachedRate +
+      (usage.output ?? 0) * output) /
+    1_000_000;
+  return dollars;
+}
+
+export function formatCost(dollars) {
+  if (dollars == null) return '';
+  if (dollars < 0.01) return `$${dollars.toFixed(4)}`;
+  if (dollars < 1) return `$${dollars.toFixed(3)}`;
+  return `$${dollars.toFixed(2)}`;
+}

@@ -4,7 +4,9 @@ import { loadPlugins, runHooks } from './plugins/index.js';
 import { TOOL_SCHEMAS, executeTool } from './tools.js';
 import { streamChat } from './providers/client.js';
 import { createPlainEmitter } from './tui/events.js';
-import { getModelCaps, conversationTokens, estimateTokens, pruneConversation } from './context.js';
+import { getModelCaps, conversationTokens, estimateTokens, pruneConversation, extractUsage, estimateCost } from './context.js';
+import { modelCost } from './providers/models.js';
+import { compactSession } from './commands/compact.js';
 import { projectContextLines } from './project.js';
 
 let pluginsCache = null;
@@ -74,6 +76,8 @@ export async function runTurn({
   let finalText = '';
   let aborted = false;
   let sawThinking = false;
+  let turnUsage = null;
+  let autoCompactNote = '';
 
   const caps = getModelCaps(provider.id, model);
   const budgetPct = Math.min(Math.max(Number(cfg.contextBudgetPct) || 60, 20), 90);
@@ -133,6 +137,12 @@ export async function runTurn({
           });
         } else if (evt.type === 'usage') {
           usage = evt.usage;
+          const u = extractUsage(evt.usage);
+          turnUsage = {
+            input: (turnUsage?.input ?? 0) + u.input,
+            output: (turnUsage?.output ?? 0) + u.output,
+            cached: (turnUsage?.cached ?? 0) + u.cached,
+          };
         }
       }
       if (bufferOnly && text) emit({ type: 'text_delta', text });
@@ -218,13 +228,48 @@ export async function runTurn({
     ctx.system = updated.system;
   }
 
+  if (turnUsage && (turnUsage.input || turnUsage.output)) {
+    session.recordUsage(turnUsage);
+  }
+
+  const ctxTokens = conversationTokens(session.messages);
+  let autoCompactRan = false;
+  if (!aborted && ctxTokens > caps.contextLimit * 0.75) {
+    if (cfg.autoCompact === true) {
+      try {
+        const res = await compactSession({
+          session,
+          summarize: (prompt) =>
+            completeOnce({
+              provider,
+              model,
+              messages: [{ role: 'user', content: prompt }],
+              system: '',
+              tools: [],
+              temperature: 0.2,
+            }),
+        });
+        if (res.changed) {
+          autoCompactRan = true;
+          autoCompactNote = `auto-compacted: -${res.removedMessages} msgs`;
+        }
+      } catch {}
+    } else {
+      autoCompactNote = 'context >75% — consider /compact';
+    }
+  }
+
   emit({
     type: 'turn_complete',
     finalText,
     aborted,
     durationMs: Date.now() - startedAt,
-    tokens: conversationTokens(session.messages),
+    tokens: ctxTokens,
     contextLimit: caps.contextLimit,
+    usage: turnUsage,
+    cost: turnUsage ? estimateCost(modelCost(provider.id, model), turnUsage) : null,
+    note: autoCompactNote || undefined,
+    autoCompacted: autoCompactRan,
   });
 
   await runHooks(plugins.hooks, 'afterResponse', {

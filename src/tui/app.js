@@ -6,6 +6,8 @@ import { commonPrefix } from './selectors.js';
 import { relativeTime } from './selectors.js';
 import { filterCommands, resolveCommandAlias, COMMANDS } from './keymap.js';
 import { formatToolLine, formatStatusSegments, toolMeta, argSummary } from './components.js';
+import { compactSession } from '../commands/compact.js';
+import { extractUsage, estimateCost, formatCost } from '../context.js';
 import { isGitRepo, currentBranch } from '../git.js';
 
 const FLUSH_MS = 66;
@@ -31,6 +33,8 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
     curModel: model,
     pendingConfirm: null,
     stashedConfirm: null,
+    lastUsage: null,
+    lastCost: null,
   };
 
   let flushTimer = null;
@@ -38,6 +42,7 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
   let eofResolve = null;
   const eofPromise = new Promise((r) => (eofResolve = r));
   const catalogMod = await import('../providers/catalog.js');
+  const modelsMod = await import('../providers/models.js');
 
   function scheduleRepaint() {
     if (flushTimer) return;
@@ -69,6 +74,13 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
   try {
     if (isGitRepo()) gitBranch = currentBranch();
   } catch {}
+
+  function usageSegment() {
+    const t = session.usageTotals?.();
+    if (!t || (!t.input && !t.output)) return '';
+    const cost = S.lastCost != null ? S.lastCost : null;
+    return `in:${t.input} out:${t.output}${t.cached ? ` cached:${t.cached}` : ''}${cost != null ? ' · ' + formatCost(cost) : ''}`;
+  }
 
   function statusLine() {
     const base = formatStatusSegments({
@@ -284,16 +296,32 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
           }).join('\n')
         );
         break;
-      case 'usage': {
-        const u = evt.usage ?? {};
-        const i = u.prompt_tokens ?? u.input_tokens;
-        const o = u.completion_tokens ?? u.output_tokens;
-        if (i != null || o != null) S.usageText = `${i ?? '?'}/${o ?? '?'} tok`;
+      case 'status':
+        if (evt.text) S.statusFlash = evt.text;
+        break;
+      case 'turn_complete': {
+        void evt;
         break;
       }
-      case 'turn_complete':
-        if (evt.aborted) sysLine('turn cancelled');
+      case 'turn_complete': {
+        if (evt.aborted) {
+          sysLine('turn cancelled');
+          break;
+        }
+        if (evt.note) {
+          S.statusFlash = evt.note;
+          setTimeout(() => {
+            S.statusFlash = '';
+            repaint();
+          }, 4000);
+        }
+        if (evt.usage) {
+          S.lastUsage = evt.usage;
+          S.lastCost = evt.cost;
+        }
+        repaint();
         break;
+      }
       default:
         break;
     }
@@ -494,6 +522,67 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
           gitBranch = st.branch;
         } else sysLine('not a git repository');
         repaint();
+        return true;
+      }
+      case '/compact': {
+        const { compactSession: cs } = await import('../commands/compact.js');
+        const { completeOnce } = await import('../providers/client.js');
+        sysLine('compacting…');
+        try {
+          const res = await cs({
+            session,
+            summarize: (prompt) =>
+              completeOnce({
+                provider: S.curProvider,
+                model: S.curModel,
+                messages: [{ role: 'user', content: prompt }],
+                system: '',
+                tools: [],
+                temperature: 0.2,
+              }),
+            thresholdTokens: Number(rest) || 6000,
+          });
+          if (res.changed) {
+            commitTranscript(c.green(`compacted ✓ removed ${res.removedMessages} msgs · freed ~${res.removedTokens} tok · pinned ${res.pinnedFiles} file refs`));
+          } else {
+            sysLine(res.reason ?? 'nothing to compact');
+          }
+        } catch (err) {
+          commitTranscript(errorToCard(err).join('\n'));
+        }
+        repaint();
+        return true;
+      }
+      case '/tokens': {
+        const t = session.usageTotals?.() ?? { input: 0, output: 0, cached: 0 };
+        const turns = (session.usage ?? []).length;
+        const ctxNow = session.messages.reduce(
+          (n, m) => n + Math.ceil(String(typeof m.content === 'string' ? m.content : '').length / 4),
+          0
+        );
+        commitTranscript(
+          [
+            c.bold('Token usage'),
+            `turns with usage: ${turns}`,
+            `in: ${t.input} · out: ${t.output} · cached: ${t.cached}`,
+            `current context ≈ ${ctxNow} tok`,
+          ].join('\n')
+        );
+        return true;
+      }
+      case '/cost': {
+        const { modelCost } = await import('../providers/models.js');
+        const { estimateCost: ec, formatCost: fc } = await import('../context.js');
+        const rate = modelCost(S.curProvider.id, S.curModel);
+        if (!rate) {
+          sysLine(`pricing unavailable for ${S.curProvider.id}/${S.curModel}`);
+          return true;
+        }
+        const t = session.usageTotals?.() ?? {};
+        const total = ec(rate, t);
+        commitTranscript(
+          `est. cost this session: ${c.bold(fc(total))} ${c.dim(`(in \$${rate.input}/Mtok · out \$${rate.output}/Mtok)`)}`
+        );
         return true;
       }
       case '/reload': {
