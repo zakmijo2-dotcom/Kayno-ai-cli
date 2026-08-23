@@ -5,6 +5,7 @@ import { resolveInWorkspace, workspaceRoot } from './workspace.js';
 import { checkPermission } from './permissions.js';
 import { truncate } from './util.js';
 import { gitStatus, gitDiff, gitLog } from './git.js';
+import { unifiedDiff } from './diff.js';
 import { diagnosticsForFiles, projectDiagnostics } from './diagnostics-engine.js';
 
 const READ_CAP_BYTES = 48 * 1024;
@@ -387,4 +388,35 @@ export function runShell(command, timeoutMs = 120000, cwd = workspaceRoot()) {
     child.on('error', (e) => res(`spawn error: ${e.message}`));
     child.on('close', (code) => res(`exit=${code ?? 'timeout'}\n${truncate(out.trim(), 128 * 1024)}`));
   });
+}
+
+export function buildToolPreview(name, args = {}) {
+  const meta = { title: name.replace(/_/g, ' '), target: args.path ?? args.command ?? args.url ?? '' };
+  try {
+    if (name === 'write_file') {
+      const abs = resolveInWorkspace(String(args.path ?? ''));
+      const before = existsSync(abs) ? readFileSync(abs, 'utf8') : '';
+      return {
+        ...meta,
+        title: existsSync(abs) ? `Overwrite ${args.path}` : `Create ${args.path}`,
+        diffText: unifiedDiff(before, String(args.content ?? ''), 3, args.path),
+        infoLines: existsSync(abs) ? [] : [`new file · ${(args.content ?? '').length} chars`],
+      };
+    }
+    if (name === 'edit_file') {
+      return {
+        ...meta,
+        title: `Edit ${args.path}`,
+        diffText: unifiedDiff(String(args.old_string ?? ''), String(args.new_string ?? ''), 2, args.path),
+      };
+    }
+    if (name === 'patch_file') {
+      return { ...meta, title: `Patch ${args.path}`, diffText: String(args.patch ?? '') };
+    }
+    if (name === 'run_command') {
+      const dangerous = /rm\s+-rf\s+\/|mkfs|dd\s+if=|:\(\)\{|shutdown|reboot/.test(String(args.command ?? ''));
+      return { ...meta, title: dangerous ? 'DESTRUCTIVE command' : 'Run command', target: args.command, dangerous };
+    }
+  } catch {}
+  return meta;
 }

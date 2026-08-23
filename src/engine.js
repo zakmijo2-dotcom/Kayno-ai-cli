@@ -3,6 +3,8 @@ import { discoverSkills, matchSkills } from './skills/index.js';
 import { loadPlugins, runHooks } from './plugins/index.js';
 import { TOOL_SCHEMAS, executeTool } from './tools.js';
 import { checkPermission } from './permissions.js';
+import { buildToolPreview } from './tools.js';
+import { buildVisionContent } from './attachments.js';
 import { streamChat } from './providers/client.js';
 import { createPlainEmitter } from './tui/events.js';
 import { getModelCaps, conversationTokens, estimateTokens, pruneConversation, extractUsage, estimateCost } from './context.js';
@@ -48,7 +50,14 @@ export async function runTurn({
   ask = null,
   emit = null,
   signal = null,
+  images = null,
 }) {
+  if (images?.length && provider.type !== 'openai') {
+    throw new Error(
+      `image attachments require an OpenAI-compatible provider (${provider.id} is ${provider.type})`
+    );
+  }
+
   if (!emit) {
     if (quiet) emit = () => {};
     else emit = createPlainEmitter({ stream: process.stdout });
@@ -71,7 +80,7 @@ export async function runTurn({
   const toolsEnabled = cfg.tools !== false;
   const toolSchemas = toolsEnabled ? TOOL_SCHEMAS : [];
 
-  session.push('user', input);
+  session.push("user", images?.length ? buildVisionContent(input, images) : input);
 
   const plugins = await getPlugins();
   const ctx = await runHooks(plugins.hooks, 'beforeRequest', {
@@ -207,7 +216,10 @@ export async function runTurn({
       let result;
       const toolStart = Date.now();
       try {
-        if (ask) emit({ type: 'confirmation_required', id, name: call.name, args: argsObj });
+        if (ask) {
+          const preview = buildToolPreview(call.name, argsObj);
+          emit({ type: 'confirmation_required', id, name: call.name, args: argsObj, preview });
+        }
         if (MUTATING_TOOLS.has(call.name)) {
           try {
             if (call.name === 'run_command') {

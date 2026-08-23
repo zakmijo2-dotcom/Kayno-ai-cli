@@ -7,10 +7,29 @@ import { relativeTime } from './selectors.js';
 import { filterCommands, resolveCommandAlias, COMMANDS } from './keymap.js';
 import { formatToolLine, formatStatusSegments, toolMeta, argSummary } from './components.js';
 import { compactSession } from '../commands/compact.js';
+import { renderDiffCard, renderMarkdown, isDiffText } from './markdown.js';
 import { extractUsage, estimateCost, formatCost } from '../context.js';
 import { isGitRepo, currentBranch } from '../git.js';
 
 const FLUSH_MS = 66;
+
+function await_import_diff() {
+  return { renderDiffCard: (...a) => diffMod.renderDiffCard(...a) };
+}
+let diffMod = null;
+await import('./markdown.js').then((m) => (diffMod = m));
+function readFileSyncSafe(path) {
+  const { readFileSync: rf } = require_fs();
+  try {
+    return rf(path, 'utf8');
+  } catch {
+    return `(could not read ${path})`;
+  }
+}
+function require_fs() {
+  return fs_mod;
+}
+import * as fs_mod from 'node:fs';
 
 export async function startTui({ cfg, provider, model, session, runTurn, deps }) {
   const io = createTerminalIO();
@@ -35,6 +54,10 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
     stashedConfirm: null,
     lastUsage: null,
     lastCost: null,
+    thinkingStart: 0,
+    thinkingBuf: '',
+    thinkExpanded: false,
+    lastThinking: null,
   };
 
   let flushTimer = null;
@@ -184,6 +207,12 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
       });
   }
 
+  async function executeTurnWithImages(input, images) {
+    S.pendingImages = images;
+    await executeTurn(input);
+    S.pendingImages = null;
+  }
+
   async function executeTurn(input) {
     S.running = true;
     S.abort = new AbortController();
@@ -202,9 +231,16 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
         model: S.curModel,
         signal: S.abort.signal,
         ask: cfg.yolo ? null : makeAsk(),
+        images: S.pendingImages,
         emit: (evt) => handleEngineEvent(evt, (v) => (assistantBuf = v), () => assistantBuf),
       });
-      if (assistantBuf.trim()) commitTranscript(assistantBuf.replace(/^\n+/, ''));
+      if (assistantBuf.trim()) {
+        const mdText = assistantBuf.replace(/^\n+/, '');
+        for (const line of (cfg.markdown !== false ? renderMarkdown(mdText, renderer.width - 1) : mdText.split('\n'))) {
+          void line;
+        }
+        commitTranscript(cfg.markdown !== false ? renderMarkdown(mdText, renderer.width - 1).join('\n') : mdText);
+      }
     } catch (err) {
       const abortedTurn = /aborted|AbortError|operation was aborted/i.test(String(err?.message ?? err));
       if (abortedTurn && assistantBuf.trim()) {
@@ -235,16 +271,17 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
         break;
       case 'confirmation_required': {
         const meta = toolMeta(evt.name);
-        const target = argSummary(evt.name, evt.args ?? {});
-        commitTranscript(
-          [
-            `  ${c.bold(sym('diamond'))} ${c.bold(meta.label)}`,
-            target ? `  ${c.cyan(truncateVisible(target, Math.max(40, renderer.width - 6)))}` : '',
-            `  ${c.yellow('Allow this operation?')} ${c.dim('[y/N]')}`,
-          ]
-            .filter(Boolean)
-            .join('\n')
-        );
+        const lines = [`  ${c.bold(sym('diamond'))} ${c.bold(meta.label)}`];
+        const pv = evt.preview ?? {};
+        if (pv.target) lines.push(`  ${c.cyan(truncateVisible(String(pv.target), Math.max(40, renderer.width - 6)))}`);
+        if (pv.diffText) {
+          const { renderDiffCard } = await_import_diff();
+          for (const l of renderDiffCard({ title: '', diffText: pv.diffText, width: renderer.width - 4 }).slice(1)) {
+            lines.push('  ' + l);
+          }
+        }
+        lines.push(`  ${c.yellow('Allow this operation?')} ${c.dim('[y/N]')}`);
+        commitTranscript(lines.filter(Boolean).join('\n'));
         break;
       }
       case 'thinking_start':
@@ -254,6 +291,21 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
       case 'thinking_end':
         S.thinking = false;
         break;
+      case 'thinking_delta':
+        S.thinkingBuf += evt.text ?? '';
+        break;
+      case 'thinking_end': {
+        const secs = ((Date.now() - S.thinkingStart) / 1000).toFixed(1);
+        if (S.thinkingBuf) {
+          S.lastThinking = { secs, text: S.thinkingBuf, expanded: false };
+          commitTranscript(
+            c.gray(`${sym('bullet')} Thought ${secs}s ${c.dim('· Ctrl+T view')}`)
+          );
+        }
+        S.thinking = false;
+        S.thinkingBuf = '';
+        break;
+      }
       case 'text_delta':
         setBuf(getBuf() + evt.text);
         S.liveText = getBuf();
@@ -535,6 +587,25 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
         repaint();
         return true;
       }
+      case '/diff': {
+        const g = await import('../git.js');
+        commitTranscript(g.isGitRepo() ? g.gitDiff({}) : c.red('not a git repository'));
+        repaint();
+        return true;
+      }
+      case '/export': {
+        const { exportTranscript } = await import('./export.js');
+        const pathOut = exportTranscript(session, rest[0]);
+        sysLine(`exported → ${pathOut}`);
+        return true;
+      }
+      case '/share': {
+        const { exportTranscript } = await import('./export.js');
+        const pathOut = exportTranscript(session, rest[0]);
+        commitTranscript(readFileSyncSafe(pathOut));
+        sysLine(`shared snapshot at ${pathOut}`);
+        return true;
+      }
       case '/undo': {
         const ck = await import('../checkpoints.js');
         const res = ck.undoLast();
@@ -653,8 +724,23 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
       if (!handled) commitTranscript(c.yellow(`unknown command ${text.split(/\s+/)[0]} — try /help`));
       return;
     }
-    commitTranscript(`${c.bold(c.blue('You'))}\n${c.magenta(sym('bullet'))} ${text}`);
-    await executeTurn(text);
+    let images = null;
+    let effectiveText = text;
+    if (/@(\S+)/.test(text)) {
+      const { parseAttachments, buildVisionContent } = await import('../attachments.js');
+      const { getCapabilities } = await import('../providers/catalog.js');
+      void buildVisionContent;
+      const capsV = getCapabilities(S.curProvider.id, S.curModel).vision;
+      const parsed = parseAttachments(text, { visionSupported: capsV });
+      for (const err of parsed.errors) sysLine(err.replace(/^@/, '@'));
+      if (parsed.images.length) {
+        images = parsed.images;
+        effectiveText = parsed.clean;
+        sysLine(`attached ${parsed.images.length} image(s)`);
+      }
+    }
+    commitTranscript(`${c.bold(c.blue('You'))}\n${c.magenta(sym('bullet'))} ${effectiveText}`);
+    await executeTurnWithImages(effectiveText, images);
   }
 
   async function handleToken(token) {
@@ -705,6 +791,21 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
         if (editor.isEmpty()) {
           S.exit = true;
           if (eofResolve) eofResolve();
+        }
+        return;
+      case 'ctrl+t':
+        if (S.lastThinking) {
+          S.lastThinking.expanded = !S.lastThinking.expanded;
+          const t = S.lastThinking;
+          const bodyLines = t.expanded
+            ? t.text.split('\n').slice(0, 40).map((l) => c.gray('│ ' + l))
+            : [c.gray(`${sym('bullet')} Thought ${t.secs}s · Ctrl+T view`)];
+          commitTranscript(
+            [
+              c.bold(c.gray(sym('diamond') + ' Thinking')) + c.dim(` ${t.secs}s`),
+              ...bodyLines,
+            ].join('\n')
+          );
         }
         return;
       case 'ctrl+l':

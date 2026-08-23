@@ -17,6 +17,10 @@ export const COMMANDS = [
   { cmd: '/cost', desc: 'estimated session cost', aliases: [] },
   { cmd: '/undo', desc: 'revert last file changes (checkpoint)', aliases: ['Ctrl+Z'] },
   { cmd: '/redo', desc: 're-apply undone changes', aliases: ['Ctrl+R'] },
+  { cmd: '/diff', desc: 'working-tree diff (git)', aliases: [] },
+  { cmd: '/export [file]', desc: 'export chat to markdown file', aliases: [] },
+  { cmd: '/share [file]', desc: 'export + print transcript snapshot', aliases: [] },
+  { cmd: '/image @path', desc: 'attach image in message (@photo.png)', aliases: [] },
   { cmd: '/exit', desc: 'quit', aliases: ['/quit', '/q'] },
 ];
 
