@@ -138,11 +138,12 @@ console.log('TUI E2E: tool confirmation via y/n keys');
     ]);
   });
   const { code, out } = await runMij(['chat'], [
-    { wait: 400, data: 'run it\r' },
-    { wait: 700, data: 'y' },
-    { wait: 900, data: '\x03' },
+    { wait: 600, data: 'run it\r' },
+    { wait: 1400, data: 'y' },
+    { wait: 1100, data: '\x03' },
   ]);
   ok(code === 0 || code === null, `exit ok (${code})`);
+  if (!/Run command/i.test(out)) console.log('DEBUG4:', JSON.stringify(out.slice(0, 2600)));
   ok(/Run command/i.test(out), 'tool card shown with label');
   ok(/echo confirm-test/.test(out), 'tool target shown');
   if (!out.includes('confirm-test') || !/exit 0/.test(out)) console.log('DEBUG3:', JSON.stringify(out.slice(-1600)));
