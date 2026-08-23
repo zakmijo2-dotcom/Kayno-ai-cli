@@ -40,7 +40,7 @@ const PROFILES = {
   raw: 'You are Kayno (mij CLI). Answer directly and concisely.',
 };
 
-export function buildSystemPrompt({ profile = 'coder', skills = [], systemOverride = '', projectLines = [] } = {}) {
+export function buildSystemPrompt({ profile = 'coder', skills = [], systemOverride = '', projectLines = [], rulesText = '' } = {}) {
   const parts = [];
   parts.push(PROFILES[profile] || PROFILES.coder);
   const env = [
@@ -55,6 +55,9 @@ export function buildSystemPrompt({ profile = 'coder', skills = [], systemOverri
   parts.push(env.join('\n'));
   if (projectLines.length) {
     parts.push(`\n# PROJECT\n${projectLines.map((l) => '- ' + l).join('\n')}`);
+  }
+  if (rulesText) {
+    parts.push(`\n# PROJECT RULES (from repo files — follow strictly)\n${rulesText}`);
   }
   if (skills.length) {
     const block = skills

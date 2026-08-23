@@ -15,6 +15,7 @@ const MUTATING_TOOLS = new Set(['write_file', 'edit_file', 'patch_file', 'run_co
 const DIAGNOSTIC_TOOLS = new Set(['write_file', 'edit_file', 'patch_file']);
 const MAX_REPAIR_ATTEMPTS = 3;
 import { projectContextLines } from './project.js';
+import { collectRules, rulesToPrompt } from './rules.js';
 
 let pluginsCache = null;
 export async function getPlugins() {
@@ -55,14 +56,17 @@ export async function runTurn({
 
   const skills = cfg.skills !== false ? matchSkills(input, discoverSkills()) : [];
   let projectLines = [];
+  let rulesText = '';
   try {
     if (cfg.projectContext !== false) projectLines = projectContextLines();
+    if (cfg.rules !== false) rulesText = rulesToPrompt(collectRules());
   } catch {}
   const system = buildSystemPrompt({
     profile: cfg.profile || 'coder',
     skills,
     systemOverride: cfg.systemOverride || '',
     projectLines,
+    rulesText,
   });
   const toolsEnabled = cfg.tools !== false;
   const toolSchemas = toolsEnabled ? TOOL_SCHEMAS : [];
