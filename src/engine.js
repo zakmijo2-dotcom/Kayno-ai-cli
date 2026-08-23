@@ -2,12 +2,14 @@ import { buildSystemPrompt } from './prompts/system.js';
 import { discoverSkills, matchSkills } from './skills/index.js';
 import { loadPlugins, runHooks } from './plugins/index.js';
 import { TOOL_SCHEMAS, executeTool } from './tools.js';
+import { checkPermission } from './permissions.js';
 import { streamChat } from './providers/client.js';
 import { createPlainEmitter } from './tui/events.js';
 import { getModelCaps, conversationTokens, estimateTokens, pruneConversation, extractUsage, estimateCost } from './context.js';
 import { modelCost } from './providers/models.js';
 import { compactSession } from './commands/compact.js';
 import { TurnCheckpoint } from './checkpoints.js';
+import { listMcpTools, callMcpTool } from './mcp/client.js';
 
 const MUTATING_TOOLS = new Set(['write_file', 'edit_file', 'patch_file', 'run_command']);
 const DIAGNOSTIC_TOOLS = new Set(['write_file', 'edit_file', 'patch_file']);
@@ -88,6 +90,7 @@ export async function runTurn({
   let sawThinking = false;
   let turnUsage = null;
   let autoCompactNote = '';
+  const mcpTools = listMcpTools();
 
   const caps = getModelCaps(provider.id, model);
   const budgetPct = Math.min(Math.max(Number(cfg.contextBudgetPct) || 60, 20), 90);
@@ -116,7 +119,7 @@ export async function runTurn({
         model,
         messages: requestMessages,
         system: ctx.system || system,
-        tools: [...toolSchemas, ...plugins.tools.map(normalizePluginTool)],
+        tools: [...toolSchemas, ...plugins.tools.map(normalizePluginTool), ...mcpTools],
         temperature: cfg.temperature ?? 0.7,
         signal,
       })) {

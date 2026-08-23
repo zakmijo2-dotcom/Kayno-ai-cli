@@ -1,0 +1,12 @@
+{
+  "servers": {
+    "filesystem": {
+      "command": "npx",
+      "args": ["-y", "@modelcontextprotocol/server-filesystem", "/path/to/allowed/dir"]
+    },
+    "my-local-server": {
+      "command": "node",
+      "args": ["./my-mcp-server.js"]
+    }
+  }
+}

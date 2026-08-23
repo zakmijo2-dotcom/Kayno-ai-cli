@@ -524,6 +524,17 @@ export async function startTui({ cfg, provider, model, session, runTurn, deps })
         repaint();
         return true;
       }
+      case '/mcp': {
+        const mcp = await import('../mcp/client.js');
+        sysLine('connecting MCP servers…');
+        const results = await mcp.connectServers();
+        for (const r of results) {
+          commitTranscript(r.ok ? c.green(`${'✓'} ${r.name}: ${r.tools} tool(s)`) : c.red(`✗ ${r.name}: ${r.error}`));
+        }
+        if (!results.length) sysLine('no servers in mcp.json (docs/mcp.example.json)');
+        repaint();
+        return true;
+      }
       case '/undo': {
         const ck = await import('../checkpoints.js');
         const res = ck.undoLast();

@@ -1,7 +1,7 @@
 import { loadConfig } from './config.js';
 import { log } from './logger.js';
 
-export const CATEGORIES = ['read', 'write', 'shell', 'network', 'git'];
+export const CATEGORIES = ['read', 'write', 'shell', 'network', 'git', 'mcp'];
 export const MODES = ['allow', 'ask', 'deny'];
 
 const DEFAULTS = {
@@ -10,6 +10,7 @@ const DEFAULTS = {
   shell: 'ask',
   network: 'allow',
   git: 'allow',
+  mcp: 'ask',
 };
 
 const TOOL_CATEGORY = {
@@ -28,6 +29,7 @@ const TOOL_CATEGORY = {
 };
 
 export function toolCategory(name) {
+  if (String(name).startsWith('mcp__')) return 'mcp';
   return TOOL_CATEGORY[name] ?? null;
 }
 
